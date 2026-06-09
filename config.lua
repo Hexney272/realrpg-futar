@@ -256,11 +256,12 @@ Config.DeliveryBlip = {
 }
 
 -- Prop-ok (kézben tartott tárgyak) - Custom stream propok
--- Több variáns van minden méretből - random választódik!
+-- Minden mérethez 5 variáns - random választódik!
 Config.Props = {
+    -- Levél: GTA beépített dokumentum prop
     letter = 'prop_cs_documents_01',
 
-    -- Csomag (S) variánsok: bzzz_prop_custom_box_1a - 1e
+    -- Csomag (S) - Kis doboz variánsok
     package_small = {
         'bzzz_prop_custom_box_1a',
         'bzzz_prop_custom_box_1b',
@@ -269,7 +270,7 @@ Config.Props = {
         'bzzz_prop_custom_box_1e',
     },
 
-    -- Csomag (M) variánsok: bzzz_prop_custom_box_2a - 2e
+    -- Csomag (M) - Közepes doboz variánsok
     package_medium = {
         'bzzz_prop_custom_box_2a',
         'bzzz_prop_custom_box_2b',
@@ -278,7 +279,7 @@ Config.Props = {
         'bzzz_prop_custom_box_2e',
     },
 
-    -- Csomag (L) variánsok: bzzz_prop_custom_box_3a - 3e
+    -- Csomag (L) - Nagy doboz variánsok
     package_large = {
         'bzzz_prop_custom_box_3a',
         'bzzz_prop_custom_box_3b',
@@ -286,6 +287,61 @@ Config.Props = {
         'bzzz_prop_custom_box_3d',
         'bzzz_prop_custom_box_3e',
     },
+}
+
+-- ==========================================
+-- PROP KÉZBEN TARTÁS POZÍCIÓK
+-- Minden csomag mérethez más pozíció!
+-- ==========================================
+Config.PropAttach = {
+    -- Levél (egy kézben, lazán tartva)
+    letter = {
+        bone = 57005,  -- SKEL_R_Hand
+        offset = vector3(0.1, 0.02, 0.0),
+        rotation = vector3(10.0, 0.0, 0.0),
+    },
+    -- Csomag (S) - Kis doboz (egy kézzel)
+    small = {
+        bone = 57005,
+        offset = vector3(0.12, 0.05, -0.05),
+        rotation = vector3(-20.0, 0.0, 0.0),
+    },
+    -- Csomag (M) - Közepes doboz (két kézzel, maga előtt)
+    medium = {
+        bone = 57005,
+        offset = vector3(0.15, 0.08, 0.0),
+        rotation = vector3(-50.0, 0.0, 0.0),
+    },
+    -- Csomag (L) - Nagy doboz (két kézzel, maga előtt, alacsonyabban)
+    large = {
+        bone = 57005,
+        offset = vector3(0.18, 0.10, 0.02),
+        rotation = vector3(-60.0, 0.0, 0.0),
+    },
+}
+
+-- ==========================================
+-- ANIMÁCIÓK (csomag méretenként eltérő!)
+-- ==========================================
+Config.Animations = {
+    -- Felvétel animációk méretenként
+    pickupLetter = { dict = 'random@domestic', name = 'pickup_low', flag = 0, duration = 1200 },
+    pickupSmall = { dict = 'random@domestic', name = 'pickup_low', flag = 0, duration = 1500 },
+    pickupMedium = { dict = 'random@domestic', name = 'pickup_low', flag = 0, duration = 2000 },
+    pickupLarge = { dict = 'random@domestic', name = 'pickup_low', flag = 0, duration = 2500 },
+
+    -- Carry animációk méretenként
+    carryLetter = { dict = 'missfbi3_party_d', name = 'yourcouch_idle_02_drunk', flag = 49, duration = -1 },
+    carrySmall = { dict = 'anim@heists@box_carry@', name = 'idle', flag = 49, duration = -1 },
+    carryMedium = { dict = 'anim@heists@box_carry@', name = 'idle', flag = 49, duration = -1 },
+    carryLarge = { dict = 'anim@heists@box_carry@', name = 'idle', flag = 49, duration = -1 },
+
+    -- Behelyezés autóba
+    putInVehicle = { dict = 'anim@heists@box_carry@', name = 'idle', flag = 0, duration = 2500 },
+    -- Csomag leadás kézbesítésnél
+    deliverPackage = { dict = 'mp_common', name = 'givetake1_b', flag = 0, duration = 2000 },
+    -- Ajtó nyitás kézzel
+    openDoor = { dict = 'mini@repair', name = 'fixing_a_ped', flag = 0, duration = 1500 },
 }
 
 -- ==========================================
@@ -358,65 +414,6 @@ Config.VehicleCargo = {
 
     -- Berakás interakció pont (a jármű oldalán, ahonnan berakod)
     loadPointOffset = vector3(0.8, -1.8, 0.0),  -- Jobb oldali hátul offset
-}
-
--- ==========================================
--- BEPAKOLÁS ANIMÁCIÓK
--- ==========================================
-Config.Animations = {
-    -- Csomag felvétel a raklapról
-    pickupFromPallet = {
-        dict = 'random@domestic',
-        name = 'pickup_low',
-        flag = 0,
-        duration = 2000
-    },
-    -- Csomag kézben tartás (séta közben)
-    carryPackage = {
-        dict = 'anim@heists@box_carry@',
-        name = 'idle',
-        flag = 49,
-        duration = -1  -- Folyamatos amíg viszi
-    },
-    -- Csomag behelyezés autóba
-    putInVehicle = {
-        dict = 'anim@heists@box_carry@',
-        name = 'idle',
-        flag = 0,
-        duration = 2500
-    },
-    -- Csomag leadás kézbesítésnél
-    deliverPackage = {
-        dict = 'mp_common',
-        name = 'givetake1_b',
-        flag = 0,
-        duration = 2000
-    },
-    -- Ajtó nyitás kézzel
-    openDoor = {
-        dict = 'mini@repair',
-        name = 'fixing_a_ped',
-        flag = 0,
-        duration = 1500
-    },
-}
-
--- ==========================================
--- PROP KÉZBEN TARTÁS POZÍCIÓK (bone offset-ek)
--- ==========================================
-Config.PropAttach = {
-    -- Csomag a kézben (két kézzel tartva, maga előtt)
-    carry = {
-        bone = 57005,  -- SKEL_R_Hand
-        offset = vector3(0.12, 0.08, 0.03),
-        rotation = vector3(-50.0, 0.0, 0.0),
-    },
-    -- Levél (egy kézben)
-    letter = {
-        bone = 57005,
-        offset = vector3(0.1, 0.02, 0.0),
-        rotation = vector3(10.0, 0.0, 0.0),
-    },
 }
 
 -- ==========================================

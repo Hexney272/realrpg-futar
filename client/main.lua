@@ -1073,7 +1073,15 @@ function PickupFromPallet()
     TaskTurnPedToFaceCoord(playerPed, propCoords.x, propCoords.y, propCoords.z, 1000)
     Wait(800)
 
-    local anim = Config.Animations.pickupFromPallet
+    -- Méret-specifikus felvétel animáció
+    local animKey = 'pickupSmall'
+    if palletData.type == 'level' then animKey = 'pickupLetter'
+    elseif palletData.type == 'small' then animKey = 'pickupSmall'
+    elseif palletData.type == 'medium' then animKey = 'pickupMedium'
+    elseif palletData.type == 'large' then animKey = 'pickupLarge'
+    end
+
+    local anim = Config.Animations[animKey]
     RequestAnimDict(anim.dict)
     while not HasAnimDictLoaded(anim.dict) do Wait(10) end
     TaskPlayAnim(playerPed, anim.dict, anim.name, 8.0, -8.0, anim.duration, anim.flag, 0, false, false, false)
@@ -1086,12 +1094,15 @@ function PickupFromPallet()
         palletData.object = nil
     end
     palletProps[targetIndex].taken = true
+    palletProps[targetIndex].object = nil
 
+    -- Csomag megjelenés a kézben
     AttachPackageProp(playerPed, palletData.type)
     Wait(anim.duration * 0.4)
     ClearPedTasks(playerPed)
 
-    StartCarryAnimation(playerPed)
+    -- Carry animáció (típussal!)
+    StartCarryAnimation(playerPed, palletData.type)
 
     isCarrying = true
     carryingIndex = targetIndex
@@ -1301,7 +1312,7 @@ function TakePackageFromVehicle()
     ClearPedTasks(playerPed)
 
     -- Carry anim
-    StartCarryAnimation(playerPed)
+    StartCarryAnimation(playerPed, delivery.type)
 
     -- Jármű ajtó bezárás
     Wait(500)
@@ -1583,19 +1594,25 @@ function RemoveRouteBlip() if routeBlip then RemoveBlip(routeBlip) routeBlip = n
 -- ==========================================
 -- ANIMÁCIÓ KEZELÉS
 -- ==========================================
-function StartCarryAnimation(ped)
-    local anim = Config.Animations.carryPackage
+function StartCarryAnimation(ped, deliveryType)
+    local animKey = 'carrySmall'
+    if deliveryType == 'level' then animKey = 'carryLetter'
+    elseif deliveryType == 'small' then animKey = 'carrySmall'
+    elseif deliveryType == 'medium' then animKey = 'carryMedium'
+    elseif deliveryType == 'large' then animKey = 'carryLarge'
+    end
+
+    local anim = Config.Animations[animKey]
+    if not anim then return end
+
     RequestAnimDict(anim.dict)
     while not HasAnimDictLoaded(anim.dict) do Wait(10) end
     TaskPlayAnim(ped, anim.dict, anim.name, 8.0, -8.0, -1, anim.flag, 0, false, false, false)
 
-    -- Mozgás sebesség módosítás a csomag típus alapján (PackageVisuals)
-    local deliveryType = carryingType
-    if not deliveryType and hasPackageInHand and currentRound.deliveries[currentRound.currentDeliveryIndex] then
-        deliveryType = currentRound.deliveries[currentRound.currentDeliveryIndex].type
-    end
-    if deliveryType and Config.PackageVisuals and Config.PackageVisuals.moveSpeedMultiplier[deliveryType] then
-        SetPedMoveRateOverride(ped, Config.PackageVisuals.moveSpeedMultiplier[deliveryType])
+    -- Mozgás lassítás méret alapján
+    local dtype = deliveryType or carryingType or 'small'
+    if Config.PackageVisuals and Config.PackageVisuals.moveSpeedMultiplier then
+        SetPedMoveRateOverride(ped, Config.PackageVisuals.moveSpeedMultiplier[dtype] or 1.0)
     end
 end
 
@@ -1632,7 +1649,20 @@ function AttachPackageProp(ped, deliveryType)
     RequestModel(model)
     while not HasModelLoaded(model) do Wait(10) end
 
-    local attach = deliveryType == 'level' and Config.PropAttach.letter or Config.PropAttach.carry
+    -- Pozíció kiválasztás típus alapján
+    local attach
+    if deliveryType == 'level' then
+        attach = Config.PropAttach.letter
+    elseif deliveryType == 'small' then
+        attach = Config.PropAttach.small
+    elseif deliveryType == 'medium' then
+        attach = Config.PropAttach.medium
+    elseif deliveryType == 'large' then
+        attach = Config.PropAttach.large
+    else
+        attach = Config.PropAttach.small
+    end
+
     local boneIndex = GetPedBoneIndex(ped, attach.bone)
     currentProp = CreateObject(model, 0.0, 0.0, 0.0, true, true, true)
     AttachEntityToEntity(currentProp, ped, boneIndex,
