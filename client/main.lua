@@ -116,34 +116,41 @@ function SpawnAllLockers()
     local modelName = Config.Locker.model
     local model = GetHashKey(modelName)
 
-    -- Modell betöltés timeout-tal (max 10 mp)
+    -- Modell betöltés timeout-tal (max 15 mp)
     RequestModel(model)
     local timeout = 0
     while not HasModelLoaded(model) do
         Wait(100)
         timeout = timeout + 100
-        if timeout > 10000 then
+        if timeout > 15000 then
             print('[RealRPG-Futar] ^1HIBA: Nem sikerült betölteni a locker modellt: ' .. modelName .. '^0')
             print('[RealRPG-Futar] ^1Ellenőrizd hogy a stream mappában benne van a .ydr és .ytyp fájl!^0')
             return
         end
     end
 
-    print('[RealRPG-Futar] Locker modell betöltve: ' .. modelName)
+    print('[RealRPG-Futar] ^2Locker modell betöltve: ' .. modelName .. ' (hash: ' .. model .. ', timeout: ' .. timeout .. 'ms)^0')
 
     for _, lockerPoint in ipairs(Config.LockerPoints) do
         -- Locker prop spawn
-        local obj = CreateObject(model, lockerPoint.coords.x, lockerPoint.coords.y, lockerPoint.coords.z - 1.0, false, false, false)
+        local obj = CreateObject(model, lockerPoint.coords.x, lockerPoint.coords.y, lockerPoint.coords.z, false, true, false)
 
-        if obj and DoesEntityExist(obj) then
+        -- Ha nem jött létre, próbáljuk másképp
+        if not obj or obj == 0 then
+            Wait(200)
+            obj = CreateObjectNoOffset(model, lockerPoint.coords.x, lockerPoint.coords.y, lockerPoint.coords.z, false, true, false)
+        end
+
+        if obj and obj ~= 0 and DoesEntityExist(obj) then
+            SetEntityAsMissionEntity(obj, true, true)
             PlaceObjectOnGroundProperly(obj)
             SetEntityHeading(obj, lockerPoint.heading)
             FreezeEntityPosition(obj, true)
-            SetEntityAsMissionEntity(obj, true, true)
+            SetEntityCollision(obj, true, true)
 
             allLockerObjects[lockerPoint.id] = obj
         else
-            print('[RealRPG-Futar] ^1HIBA: Locker nem jött létre: ' .. lockerPoint.label .. '^0')
+            print('[RealRPG-Futar] ^1HIBA: Locker #' .. lockerPoint.id .. ' NEM jött létre! (' .. lockerPoint.label .. ') ret=' .. tostring(obj) .. '^0')
         end
 
         -- Blip
@@ -157,10 +164,12 @@ function SpawnAllLockers()
         EndTextCommandSetBlipName(blip)
 
         allLockerBlips[lockerPoint.id] = blip
+
+        Wait(50)
     end
 
     SetModelAsNoLongerNeeded(model)
-    print('[RealRPG-Futar] ' .. #Config.LockerPoints .. ' fix locker spawnolva.')
+    print('[RealRPG-Futar] ^2Locker spawn kész. Összesen: ' .. #Config.LockerPoints .. '^0')
 end
 
 -- ==========================================
