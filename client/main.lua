@@ -68,6 +68,23 @@ local assignedCompartment = 0        -- Melyik fiókba kell berakni
 local currentLockerTarget = nil      -- Aktuálisan aktív locker (ahova most kell vinni)
 
 -- ==========================================
+-- TÖRÉKENY CSOMAG RENDSZER VÁLTOZÓK
+-- ==========================================
+local fragileDamage = {}             -- {deliveryIndex = damagePercent}
+local lastVehicleSpeed = 0.0
+local lastVehicleHealth = 1000
+
+-- ==========================================
+-- EXPRESSZ CSOMAG RENDSZER VÁLTOZÓK
+-- ==========================================
+local expressTimers = {}             -- {deliveryIndex = {startTime, timeLimit}}
+
+-- ==========================================
+-- BOLT RENDSZER VÁLTOZÓK
+-- ==========================================
+local shopNPC = nil
+
+-- ==========================================
 -- INICIALIZÁLÁS
 -- ==========================================
 CreateThread(function()
@@ -86,6 +103,7 @@ CreateThread(function()
     SpawnAllLockers()
 
     SpawnJobNPC()
+    SpawnShopNPC()
 end)
 
 -- ==========================================
@@ -143,6 +161,31 @@ function SpawnJobNPC()
 
     if npcConfig.scenario then
         TaskStartScenarioInPlace(jobNPC, npcConfig.scenario, 0, true)
+    end
+
+    SetModelAsNoLongerNeeded(model)
+end
+
+-- ==========================================
+-- BOLT NPC KEZELÉS
+-- ==========================================
+function SpawnShopNPC()
+    if not Config.Shop or not Config.Shop.enabled then return end
+
+    local shopConfig = Config.Shop.npc
+    local model = GetHashKey(shopConfig.model)
+
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(10) end
+
+    shopNPC = CreatePed(4, model, shopConfig.coords.x, shopConfig.coords.y, shopConfig.coords.z, shopConfig.coords.w, false, true)
+    SetEntityInvincible(shopNPC, true)
+    SetBlockingOfNonTemporaryEvents(shopNPC, true)
+    FreezeEntityPosition(shopNPC, true)
+    SetEntityHeading(shopNPC, shopConfig.coords.w)
+
+    if shopConfig.scenario then
+        TaskStartScenarioInPlace(shopNPC, shopConfig.scenario, 0, true)
     end
 
     SetModelAsNoLongerNeeded(model)
@@ -258,6 +301,41 @@ CreateThread(function()
                     id = 'finish_round',
                     type = 'finish_round',
                     worldCoords = vector3(Config.Depot.coords.x, Config.Depot.coords.y, Config.Depot.coords.z + 1.0)
+                })
+            end
+        end
+
+        -- ==========================================
+        -- JÁRMŰ JAVÍTÁS INTERAKCIÓ
+        -- ==========================================
+        if isWorking and not isOnRound and Config.VehicleRepair.enabled and jobVehicle and DoesEntityExist(jobVehicle) then
+            local vehHealth = GetEntityHealth(jobVehicle) - 100 -- Entity health starts at 100 (body) 
+            local engineHealth = GetVehicleEngineHealth(jobVehicle)
+            local combinedHealth = math.min(vehHealth, engineHealth)
+
+            if combinedHealth < Config.VehicleRepair.minHealthToStart then
+                local distToRepair = #(playerCoords - Config.VehicleRepair.repairPoint)
+                if distToRepair < Config.VehicleRepair.repairDistance then
+                    table.insert(newInteractions, {
+                        id = 'repair_vehicle',
+                        type = 'repair_vehicle',
+                        worldCoords = vector3(Config.VehicleRepair.repairPoint.x, Config.VehicleRepair.repairPoint.y, Config.VehicleRepair.repairPoint.z + 1.0)
+                    })
+                end
+            end
+        end
+
+        -- ==========================================
+        -- BOLT NPC INTERAKCIÓ
+        -- ==========================================
+        if isWorking and not isOnRound and Config.Shop.enabled and shopNPC and DoesEntityExist(shopNPC) then
+            local shopCoords = GetEntityCoords(shopNPC)
+            local distToShop = #(playerCoords - shopCoords)
+            if distToShop < Config.Interaction.depotDistance then
+                table.insert(newInteractions, {
+                    id = 'open_shop',
+                    type = 'open_shop',
+                    worldCoords = vector3(shopCoords.x, shopCoords.y, shopCoords.z + 1.2)
                 })
             end
         end
@@ -521,6 +599,10 @@ RegisterNUICallback('iconClicked', function(data, cb)
         OpenLockerCompartment()
     elseif iconType == 'deliver' then
         DeliverToLocker()
+    elseif iconType == 'repair_vehicle' then
+        RepairJobVehicle()
+    elseif iconType == 'open_shop' then
+        OpenShop()
     end
 
     cb('ok')
@@ -635,6 +717,9 @@ CreateThread(function()
                 })
             elseif currentRound.pickedUp then
                 local completed = #currentRound.completedDeliveries
+                local currentIdx = currentRound.currentDeliveryIndex
+                local currentDelivery = currentRound.deliveries[currentIdx]
+
                 SendNUIMessage({
                     action = 'updateHUD',
                     data = {
@@ -642,10 +727,58 @@ CreateThread(function()
                         timeRemaining = remaining,
                         deliveriesCompleted = completed,
                         deliveriesTotal = currentRound.totalDeliveries,
-                        currentDeliveryLabel = currentRound.deliveries[currentRound.currentDeliveryIndex] and currentRound.deliveries[currentRound.currentDeliveryIndex].label or '',
-                        currentDeliveryType = currentRound.deliveries[currentRound.currentDeliveryIndex] and currentRound.deliveries[currentRound.currentDeliveryIndex].type or ''
+                        currentDeliveryLabel = currentDelivery and currentDelivery.label or '',
+                        currentDeliveryType = currentDelivery and currentDelivery.type or ''
                     }
                 })
+
+                -- Expressz timer NUI frissítés
+                if currentDelivery and currentDelivery.isExpress and expressTimers[currentIdx] then
+                    local timerData = expressTimers[currentIdx]
+                    local expressElapsed = (GetGameTimer() - timerData.startTime) / 1000
+                    local expressRemaining = timerData.timeLimit - expressElapsed
+                    if expressRemaining < 0 then expressRemaining = 0 end
+
+                    local percentRemaining = (expressRemaining / timerData.timeLimit) * 100
+                    local timerColor = 'normal'
+                    if percentRemaining <= Config.Express.criticalPercent then
+                        timerColor = 'critical'
+                    elseif percentRemaining <= Config.Express.warningPercent then
+                        timerColor = 'warning'
+                    end
+
+                    SendNUIMessage({
+                        action = 'updateExpressTimer',
+                        data = {
+                            active = true,
+                            timeRemaining = math.floor(expressRemaining),
+                            timerColor = timerColor
+                        }
+                    })
+                else
+                    SendNUIMessage({
+                        action = 'updateExpressTimer',
+                        data = { active = false }
+                    })
+                end
+
+                -- Törékeny csomag indikátor
+                if currentDelivery and currentDelivery.isFragile then
+                    SendNUIMessage({
+                        action = 'updateFragileIndicator',
+                        data = {
+                            show = true,
+                            isFragile = true,
+                            damage = fragileDamage[currentIdx] or 0,
+                            label = Config.Fragile.label
+                        }
+                    })
+                else
+                    SendNUIMessage({
+                        action = 'updateFragileIndicator',
+                        data = { show = false }
+                    })
+                end
             else
                 SendNUIMessage({ action = 'updateHUD', data = { show = false } })
             end
@@ -839,6 +972,18 @@ RegisterNetEvent('seerpg-futar:client:roundGenerated', function(roundData)
     carryingType = nil
     isDoorOpen = false
 
+    -- Expressz timer inicializálás
+    expressTimers = {}
+    fragileDamage = {}
+    for i, delivery in ipairs(roundData.deliveries) do
+        if delivery.isExpress then
+            expressTimers[i] = { startTime = GetGameTimer(), timeLimit = delivery.expressTimeLimit }
+        end
+        if delivery.isFragile then
+            fragileDamage[i] = 0
+        end
+    end
+
     SpawnPalletWithPackages()
     Notify(Config.Locale.round_started)
 end)
@@ -993,13 +1138,20 @@ function LoadPackageIntoVehicle()
     StopCarryAnimation(playerPed)
     Wait(200)
 
-    TaskPlayAnim(playerPed, anim.dict, anim.name, 8.0, -8.0, anim.duration, anim.flag, 0, false, false, false)
-    Wait(anim.duration * 0.5)
+    -- Bepakolás idő szorzó a csomag méret alapján
+    local loadTimeMult = 1.0
+    if carryingType and Config.PackageVisuals and Config.PackageVisuals.loadTimeMultiplier[carryingType] then
+        loadTimeMult = Config.PackageVisuals.loadTimeMultiplier[carryingType]
+    end
+    local adjustedDuration = math.floor(anim.duration * loadTimeMult)
+
+    TaskPlayAnim(playerPed, anim.dict, anim.name, 8.0, -8.0, adjustedDuration, anim.flag, 0, false, false, false)
+    Wait(math.floor(adjustedDuration * 0.5))
 
     DeleteCurrentProp()
     SpawnCargoInVehicle(carryingType)
 
-    Wait(anim.duration * 0.5)
+    Wait(math.floor(adjustedDuration * 0.5))
     ClearPedTasks(playerPed)
 
     packagesLoaded = packagesLoaded + 1
@@ -1207,9 +1359,26 @@ function DeliverToLocker()
     -- Kézbesítés regisztrálás
     hasPackageInHand = false
 
+    local currentIdx = currentRound.currentDeliveryIndex
+
+    -- Expressz siker ellenőrzés
+    local expressSuccess = nil
+    if delivery.isExpress and expressTimers[currentIdx] then
+        local timerData = expressTimers[currentIdx]
+        local expressElapsed = (GetGameTimer() - timerData.startTime) / 1000
+        local expressRemaining = timerData.timeLimit - expressElapsed
+        expressSuccess = expressRemaining > 0
+    end
+
     table.insert(currentRound.completedDeliveries, {
         type = delivery.type,
-        time = GetGameTimer()
+        time = GetGameTimer(),
+        isFragile = delivery.isFragile or false,
+        damage = fragileDamage[currentIdx] or 0,
+        isExpress = delivery.isExpress or false,
+        expressSuccess = expressSuccess,
+        distanceMultiplier = delivery.distanceMultiplier or 1.0,
+        packageSizeMultiplier = delivery.packageSizeMultiplier or 1.0,
     })
 
     isAnimPlaying = false
@@ -1330,6 +1499,8 @@ function CancelRound()
     hasPackageInHand = false
     isLockerDoorOpen = false
     openedCompartment = 0
+    fragileDamage = {}
+    expressTimers = {}
 
     DeleteCurrentProp()
     CleanupPallet()
@@ -1341,6 +1512,8 @@ function CancelRound()
 
     lastRoundEnd = GetGameTimer()
     SendNUIMessage({ action = 'updateHUD', data = { show = false } })
+    SendNUIMessage({ action = 'updateFragileIndicator', data = { show = false } })
+    SendNUIMessage({ action = 'updateExpressTimer', data = { active = false } })
     if isCursorMode then DisableCursorMode() end
 end
 
@@ -1399,10 +1572,20 @@ function StartCarryAnimation(ped)
     RequestAnimDict(anim.dict)
     while not HasAnimDictLoaded(anim.dict) do Wait(10) end
     TaskPlayAnim(ped, anim.dict, anim.name, 8.0, -8.0, -1, anim.flag, 0, false, false, false)
+
+    -- Mozgás sebesség módosítás a csomag típus alapján (PackageVisuals)
+    local deliveryType = carryingType
+    if not deliveryType and hasPackageInHand and currentRound.deliveries[currentRound.currentDeliveryIndex] then
+        deliveryType = currentRound.deliveries[currentRound.currentDeliveryIndex].type
+    end
+    if deliveryType and Config.PackageVisuals and Config.PackageVisuals.moveSpeedMultiplier[deliveryType] then
+        SetPedMoveRateOverride(ped, Config.PackageVisuals.moveSpeedMultiplier[deliveryType])
+    end
 end
 
 function StopCarryAnimation(ped)
     ClearPedTasks(ped)
+    SetPedMoveRateOverride(ped, 1.0)
 end
 
 -- ==========================================
@@ -1483,11 +1666,170 @@ function GetDeliveryTypeLabel(dtype)
 end
 
 -- ==========================================
+-- TÖRÉKENY CSOMAG SÉRÜLÉS MONITOROZÁS
+-- ==========================================
+CreateThread(function()
+    while true do
+        Wait(100)  -- 10x per second check
+
+        if isOnRound and jobVehicle and DoesEntityExist(jobVehicle) then
+            local ped = PlayerPedId()
+            local currentIdx = currentRound.currentDeliveryIndex
+
+            -- Járműben ülés közben - ütközés detektálás
+            if IsPedInVehicle(ped, jobVehicle, false) then
+                local currentSpeed = GetEntitySpeed(jobVehicle) * 3.6  -- m/s to km/h
+                local currentHealth = GetVehicleEngineHealth(jobVehicle)
+
+                -- Ütközés detektálás: health csökkent?
+                if currentHealth < lastVehicleHealth then
+                    local healthDrop = lastVehicleHealth - currentHealth
+
+                    if lastVehicleSpeed > Config.Fragile.damage.collision.minSpeed then
+                        -- Sérülés számítás: minden törékeny csomagra
+                        local baseDamage = Config.Fragile.damage.collision.damagePerHit
+                        local speedBonus = (lastVehicleSpeed - Config.Fragile.damage.collision.minSpeed) * Config.Fragile.damage.collision.speedMultiplier
+                        local totalDamage = math.min(baseDamage + speedBonus, Config.Fragile.damage.collision.maxDamagePerHit)
+
+                        for i, delivery in ipairs(currentRound.deliveries) do
+                            if delivery.isFragile and fragileDamage[i] ~= nil and fragileDamage[i] < 100 then
+                                -- Csak az aktuális és még nem kézbesített csomagokra
+                                local alreadyDelivered = false
+                                for _, completed in ipairs(currentRound.completedDeliveries) do
+                                    if completed.time and i <= #currentRound.completedDeliveries then
+                                        -- Skip
+                                    end
+                                end
+                                if i >= currentIdx then
+                                    fragileDamage[i] = math.min(100, (fragileDamage[i] or 0) + totalDamage)
+                                end
+                            end
+                        end
+                    end
+                end
+
+                lastVehicleSpeed = currentSpeed
+                lastVehicleHealth = currentHealth
+            end
+
+            -- Játékos elesés (csomag kézben)
+            if (hasPackageInHand or isCarrying) and Config.Fragile.damage.playerFall.enabled then
+                if HasEntityBeenDamagedByAnyPed(ped) or IsPedRagdoll(ped) or IsPedFalling(ped) then
+                    if currentIdx and currentRound.deliveries[currentIdx] and currentRound.deliveries[currentIdx].isFragile then
+                        if fragileDamage[currentIdx] then
+                            fragileDamage[currentIdx] = math.min(100, fragileDamage[currentIdx] + Config.Fragile.damage.playerFall.damagePerFall)
+                        end
+                    end
+                    ClearEntityLastDamageEntity(ped)
+                end
+            end
+        else
+            -- Reset tracking ha nincs járműben
+            lastVehicleSpeed = 0.0
+            lastVehicleHealth = 1000
+        end
+    end
+end)
+
+-- ==========================================
+-- JÁRMŰ JAVÍTÁS
+-- ==========================================
+function RepairJobVehicle()
+    if not jobVehicle or not DoesEntityExist(jobVehicle) then return end
+    if isAnimPlaying then return end
+
+    local engineHealth = GetVehicleEngineHealth(jobVehicle)
+    local damagePts = math.floor(1000 - engineHealth)
+    local cost = Config.VehicleRepair.repairCost.base + (damagePts * Config.VehicleRepair.repairCost.perDamagePoint)
+
+    isAnimPlaying = true
+    local ped = PlayerPedId()
+
+    -- Animáció
+    local anim = Config.VehicleRepair.animation
+    RequestAnimDict(anim.dict)
+    while not HasAnimDictLoaded(anim.dict) do Wait(10) end
+    TaskPlayAnim(ped, anim.dict, anim.name, 8.0, -8.0, Config.VehicleRepair.repairTime, anim.flag, 0, false, false, false)
+
+    Wait(Config.VehicleRepair.repairTime)
+    ClearPedTasks(ped)
+
+    -- Javítás végrehajtás
+    SetVehicleFixed(jobVehicle)
+    SetVehicleEngineHealth(jobVehicle, 1000.0)
+    SetVehicleBodyHealth(jobVehicle, 1000.0)
+    SetVehicleDirtLevel(jobVehicle, 0.0)
+    lastVehicleHealth = 1000
+
+    -- Szerver felé költség
+    TriggerServerEvent('seerpg-futar:server:chargeRepair', cost)
+
+    isAnimPlaying = false
+    Notify('~g~Jármű megjavítva! ~w~(-' .. cost .. ' Ft)')
+end
+
+-- Szerver visszajelzés javítás eredményéről
+RegisterNetEvent('seerpg-futar:client:repairSuccess', function(data)
+    -- Javítás sikeres, pénz levonva
+end)
+
+RegisterNetEvent('seerpg-futar:client:repairFailed', function(data)
+    Notify('~r~Nincs elég pénzed a javításra!')
+end)
+
+-- ==========================================
+-- FUTÁR BOLT
+-- ==========================================
+function OpenShop()
+    if isUIOpen then return end
+    TriggerServerEvent('seerpg-futar:server:getShopData')
+end
+
+RegisterNetEvent('seerpg-futar:client:shopData', function(data)
+    isUIOpen = true
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'showShopPanel',
+        data = data
+    })
+end)
+
+RegisterNetEvent('seerpg-futar:client:shopBuyResult', function(data)
+    if data.success then
+        Notify('~g~Sikeres vásárlás: ' .. (data.upgradeName or '') .. ' (-' .. (data.price or 0) .. ' Ft)')
+        -- Frissítjük a bolt adatokat
+        TriggerServerEvent('seerpg-futar:server:getShopData')
+    else
+        local reasons = {
+            already_owned = '~r~Már megvásároltad ezt a fejlesztést!',
+            level_low = '~r~Túl alacsony a szinted ehhez!',
+            requires_missing = '~r~Előbb meg kell venned az előfeltételt!',
+            no_money = '~r~Nincs elég pénzed!',
+        }
+        Notify(reasons[data.reason] or '~r~Sikertelen vásárlás!')
+    end
+end)
+
+RegisterNUICallback('buyUpgrade', function(data, cb)
+    if data.upgradeId then
+        TriggerServerEvent('seerpg-futar:server:buyUpgrade', data.upgradeId)
+    end
+    cb('ok')
+end)
+
+RegisterNUICallback('closeShop', function(data, cb)
+    SetNuiFocus(false, false)
+    isUIOpen = false
+    cb('ok')
+end)
+
+-- ==========================================
 -- RESOURCE CLEANUP
 -- ==========================================
 AddEventHandler('onResourceStop', function(resourceName)
     if GetCurrentResourceName() ~= resourceName then return end
     if jobNPC and DoesEntityExist(jobNPC) then DeleteEntity(jobNPC) end
+    if shopNPC and DoesEntityExist(shopNPC) then DeleteEntity(shopNPC) end
     DeleteJobVehicle()
     DeleteCurrentProp()
     CleanupPallet()
@@ -1497,6 +1839,8 @@ AddEventHandler('onResourceStop', function(resourceName)
     RemoveDeliveryBlip()
     RemoveRouteBlip()
     SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'updateFragileIndicator', data = { show = false } })
+    SendNUIMessage({ action = 'updateExpressTimer', data = { active = false } })
 end)
 
 -- ==========================================

@@ -16,6 +16,37 @@
         <span class="alt-hint-text">Interakció</span>
     </div>
 
+    <!-- Fragile Package Indicator -->
+    <div id="fragile-indicator" class="fragile-indicator hidden">
+        <div class="fragile-icon">⚠️</div>
+        <div class="fragile-bar-container">
+            <div class="fragile-bar" id="fragile-bar"></div>
+        </div>
+        <div class="fragile-label" id="fragile-label">TÖRÉKENY</div>
+        <div class="fragile-percent" id="fragile-percent">0%</div>
+    </div>
+
+    <!-- Express Timer -->
+    <div id="express-timer" class="express-timer hidden">
+        <div class="express-icon">⚡</div>
+        <div class="express-label">EXPRESSZ</div>
+        <div class="express-time" id="express-time">3:00</div>
+    </div>
+
+    <!-- Shop Panel -->
+    <div id="shop-panel" class="panel hidden">
+        <div class="panel-content shop-content">
+            <div class="panel-close-area">
+                <button class="close-btn" id="shop-close-btn">&times;</button>
+            </div>
+            <div class="shop-title">🛒 Futár Bolt</div>
+            <div class="shop-money" id="shop-money">Egyenleg: 0 Ft</div>
+            <div class="shop-list" id="shop-list">
+                <!-- Dinamikusan generálódik JS-ből -->
+            </div>
+        </div>
+    </div>
+
     <!-- Job HUD -->
     <div id="job-hud" class="hud hidden">
         <div class="hud-content">
@@ -101,6 +132,18 @@
                 <div class="detail-row" id="time-bonus-row" style="display:none">
                     <span class="detail-label">Időbónusz:</span>
                     <span class="detail-value orange" id="time-bonus-value">0 Ft</span>
+                </div>
+                <div class="detail-row" id="fragile-penalty-row" style="display:none">
+                    <span class="detail-label">Törékeny sérülés:</span>
+                    <span class="detail-value red" id="fragile-penalty-value">0 Ft</span>
+                </div>
+                <div class="detail-row" id="express-bonus-row" style="display:none">
+                    <span class="detail-label">Expressz bónusz:</span>
+                    <span class="detail-value green" id="express-bonus-value">0 Ft</span>
+                </div>
+                <div class="detail-row" id="seasonal-bonus-row" style="display:none">
+                    <span class="detail-label">Szezonális esemény:</span>
+                    <span class="detail-value orange" id="seasonal-bonus-value">0 Ft</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Gyűjtött munka skill:</span>

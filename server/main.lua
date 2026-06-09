@@ -38,8 +38,19 @@ MySQL.ready(function()
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ]])
 
+    MySQL.query([[
+        CREATE TABLE IF NOT EXISTS `seerpg_futar_purchases` (
+            `id` INT AUTO_INCREMENT,
+            `identifier` VARCHAR(60) NOT NULL,
+            `upgrade_id` VARCHAR(60) NOT NULL,
+            `purchased_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `unique_purchase` (`identifier`, `upgrade_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ]])
+
     if Config.Debug then
-        print('[RealRPG-Futar] Adatbázis tábla ellenőrizve/létrehozva.')
+        print('[RealRPG-Futar] Adatbázis táblák ellenőrizve/létrehozva.')
     end
 end)
 
@@ -217,6 +228,7 @@ AddEventHandler('playerDropped', function()
     playerJobs[source] = nil
     playerRounds[source] = nil
     playerCooldowns[source] = nil
+    playerPurchases[source] = nil
 end)
 
 -- Resource start - online játékosok betöltése
@@ -296,6 +308,218 @@ RegisterNetEvent('seerpg-futar:server:endJob', function()
         print('[RealRPG-Futar] ' .. GetPlayerName(source) .. ' befejezte a munkát.')
     end
 end)
+
+-- ==========================================
+-- SZEZONÁLIS ESEMÉNYEK
+-- ==========================================
+function GetActiveSeasonalEvent()
+    if not Config.SeasonalEvents or not Config.SeasonalEvents.enabled then return nil end
+
+    local currentDate = os.date('*t')
+    local currentMonth = currentDate.month
+    local currentDay = currentDate.day
+    local currentWday = currentDate.wday  -- 1=Sunday, 7=Saturday
+
+    local activeEvent = nil
+
+    for eventId, event in pairs(Config.SeasonalEvents.events) do
+        if event.isWeekendOnly then
+            -- Hétvégi boost: szombat (7) vagy vasárnap (1)
+            if currentWday == 1 or currentWday == 7 then
+                activeEvent = event
+                break
+            end
+        elseif event.startMonth and event.endMonth then
+            local isActive = false
+
+            if event.startMonth <= event.endMonth then
+                -- Normál tartomány (pl. Ápr 1 - Ápr 20)
+                if currentMonth > event.startMonth or (currentMonth == event.startMonth and currentDay >= event.startDay) then
+                    if currentMonth < event.endMonth or (currentMonth == event.endMonth and currentDay <= event.endDay) then
+                        isActive = true
+                    end
+                end
+            else
+                -- Évet átívelő tartomány (pl. Dec 15 - Jan 5)
+                if currentMonth > event.startMonth or (currentMonth == event.startMonth and currentDay >= event.startDay) then
+                    isActive = true
+                elseif currentMonth < event.endMonth or (currentMonth == event.endMonth and currentDay <= event.endDay) then
+                    isActive = true
+                end
+            end
+
+            if isActive then
+                activeEvent = event
+                break
+            end
+        end
+    end
+
+    return activeEvent
+end
+
+-- ==========================================
+-- JÁRMŰ JAVÍTÁS FIZETÉS
+-- ==========================================
+RegisterNetEvent('seerpg-futar:server:chargeRepair', function(cost)
+    local source = source
+
+    if not playerJobs[source] then return end
+    if not cost or type(cost) ~= 'number' or cost < 0 then return end
+
+    -- Költség levonás
+    if Config.Framework == 'esx' then
+        local xPlayer = ESX.GetPlayerFromId(source)
+        if xPlayer then
+            if xPlayer.getMoney() >= cost then
+                xPlayer.removeMoney(cost)
+                TriggerClientEvent('seerpg-futar:client:repairSuccess', source, { cost = cost })
+            else
+                TriggerClientEvent('seerpg-futar:client:repairFailed', source, { reason = 'no_money' })
+            end
+        end
+    elseif Config.Framework == 'qbcore' then
+        local Player = QBCore.Functions.GetPlayer(source)
+        if Player then
+            if Player.Functions.GetMoney('cash') >= cost then
+                Player.Functions.RemoveMoney('cash', cost, 'futar-javitas')
+                TriggerClientEvent('seerpg-futar:client:repairSuccess', source, { cost = cost })
+            else
+                TriggerClientEvent('seerpg-futar:client:repairFailed', source, { reason = 'no_money' })
+            end
+        end
+    end
+
+    if Config.Debug then
+        print('[RealRPG-Futar] Jármű javítás: ' .. GetPlayerName(source) .. ' - ' .. cost .. ' Ft')
+    end
+end)
+
+-- ==========================================
+-- FUTÁR BOLT RENDSZER
+-- ==========================================
+local playerPurchases = {}  -- {source = {upgrade_id = true, ...}}
+
+-- Bolt adatok betöltése
+local function LoadPlayerPurchases(source)
+    local identifier = GetPlayerIdentifier(source)
+    if not identifier then return end
+
+    local result = MySQL.query.await('SELECT `upgrade_id` FROM `seerpg_futar_purchases` WHERE `identifier` = ?', { identifier })
+    playerPurchases[source] = {}
+
+    if result then
+        for _, row in ipairs(result) do
+            playerPurchases[source][row.upgrade_id] = true
+        end
+    end
+end
+
+RegisterNetEvent('seerpg-futar:server:getShopData', function()
+    local source = source
+
+    if not playerJobs[source] then return end
+
+    -- Betöltjük a vásárlásokat ha még nincs
+    if not playerPurchases[source] then
+        LoadPlayerPurchases(source)
+    end
+
+    local data = playerSkills[source]
+    if not data then return end
+
+    local skillLevel = GetSkillLevel(data.skill_points)
+
+    TriggerClientEvent('seerpg-futar:client:shopData', source, {
+        upgrades = Config.Shop.upgrades,
+        purchased = playerPurchases[source] or {},
+        skillLevel = skillLevel,
+        playerMoney = GetPlayerMoney(source)
+    })
+end)
+
+RegisterNetEvent('seerpg-futar:server:buyUpgrade', function(upgradeId)
+    local source = source
+
+    if not playerJobs[source] then return end
+    if not upgradeId or type(upgradeId) ~= 'string' then return end
+
+    local upgrade = Config.Shop.upgrades[upgradeId]
+    if not upgrade then return end
+
+    -- Már megvásárolta?
+    if not playerPurchases[source] then LoadPlayerPurchases(source) end
+    if playerPurchases[source][upgradeId] then
+        TriggerClientEvent('seerpg-futar:client:shopBuyResult', source, { success = false, reason = 'already_owned' })
+        return
+    end
+
+    -- Szint ellenőrzés
+    local data = playerSkills[source]
+    if not data then return end
+    local skillLevel = GetSkillLevel(data.skill_points)
+    if skillLevel < upgrade.minLevel then
+        TriggerClientEvent('seerpg-futar:client:shopBuyResult', source, { success = false, reason = 'level_low' })
+        return
+    end
+
+    -- Előfeltétel ellenőrzés
+    if upgrade.requires and not playerPurchases[source][upgrade.requires] then
+        TriggerClientEvent('seerpg-futar:client:shopBuyResult', source, { success = false, reason = 'requires_missing' })
+        return
+    end
+
+    -- Pénz ellenőrzés és levonás
+    local price = upgrade.price
+    local hasMoney = false
+
+    if Config.Framework == 'esx' then
+        local xPlayer = ESX.GetPlayerFromId(source)
+        if xPlayer and xPlayer.getMoney() >= price then
+            xPlayer.removeMoney(price)
+            hasMoney = true
+        end
+    elseif Config.Framework == 'qbcore' then
+        local Player = QBCore.Functions.GetPlayer(source)
+        if Player and Player.Functions.GetMoney('cash') >= price then
+            Player.Functions.RemoveMoney('cash', price, 'futar-bolt-' .. upgradeId)
+            hasMoney = true
+        end
+    end
+
+    if not hasMoney then
+        TriggerClientEvent('seerpg-futar:client:shopBuyResult', source, { success = false, reason = 'no_money' })
+        return
+    end
+
+    -- Vásárlás mentése
+    local identifier = GetPlayerIdentifier(source)
+    MySQL.insert('INSERT INTO `seerpg_futar_purchases` (`identifier`, `upgrade_id`) VALUES (?, ?)', { identifier, upgradeId })
+    playerPurchases[source][upgradeId] = true
+
+    TriggerClientEvent('seerpg-futar:client:shopBuyResult', source, {
+        success = true,
+        upgradeId = upgradeId,
+        upgradeName = upgrade.name,
+        price = price
+    })
+
+    if Config.Debug then
+        print('[RealRPG-Futar] Bolt vásárlás: ' .. GetPlayerName(source) .. ' - ' .. upgrade.name .. ' (' .. price .. ' Ft)')
+    end
+end)
+
+-- Segéd: játékos pénze
+local function GetPlayerMoney(source)
+    if Config.Framework == 'esx' then
+        local xPlayer = ESX.GetPlayerFromId(source)
+        if xPlayer then return xPlayer.getMoney() end
+    elseif Config.Framework == 'qbcore' then
+        local Player = QBCore.Functions.GetPlayer(source)
+        if Player then return Player.Functions.GetMoney('cash') end
+    end
+    return 0
+end
 
 -- ==========================================
 -- SEGÉD: Távolság kategória meghatározása
@@ -404,6 +628,32 @@ RegisterNetEvent('seerpg-futar:server:requestRound', function()
                 distanceMultiplier = distanceMultiplier,
                 packageSizeMultiplier = Config.PackageSizeMultiplier[deliveryType] or 1.0,
             }
+
+            -- Törékeny csomag meghatározás
+            if Config.Fragile.enabled then
+                local fragileRoll = math.random(1, 100)
+                if fragileRoll <= Config.Fragile.chance then
+                    delivery.isFragile = true
+                end
+            end
+
+            -- Expressz csomag meghatározás
+            if Config.Express.enabled then
+                local expressRoll = math.random(1, 100)
+                local expressChance = Config.Express.chance
+                -- Szezonális esemény módosíthatja az esélyt
+                local seasonalEvent = GetActiveSeasonalEvent()
+                if seasonalEvent and seasonalEvent.bonuses and seasonalEvent.bonuses.expressChance then
+                    expressChance = seasonalEvent.bonuses.expressChance
+                end
+                if expressRoll <= expressChance then
+                    delivery.isExpress = true
+                    -- Időlimit számítás: base + (distance/1000) * perKm, clamp min/max
+                    local timeLimit = Config.Express.timeLimit.base + math.floor((distance / 1000) * Config.Express.timeLimit.perKm)
+                    timeLimit = math.max(Config.Express.timeLimit.minTime, math.min(Config.Express.timeLimit.maxTime, timeLimit))
+                    delivery.expressTimeLimit = timeLimit
+                end
+            end
 
             table.insert(deliveries, delivery)
             table.insert(lockerPackages, delivery)
@@ -581,6 +831,56 @@ RegisterNetEvent('seerpg-futar:server:completeRound', function(completedDeliveri
     local rankColor = Config.Ranks[skillLevel] and Config.Ranks[skillLevel].color or '#ffffff'
 
     -- ==========================================
+    -- TÖRÉKENY CSOMAG SÉRÜLÉS BÜNTETÉS
+    -- ==========================================
+    local totalFragilePenalty = 0
+    if Config.Fragile.enabled then
+        for _, delivery in ipairs(completedDeliveries) do
+            if delivery.damage and delivery.damage > 0 and delivery.isFragile then
+                local penaltyPercent = delivery.damage * Config.Fragile.payPenalty.penaltyMultiplier / 100
+                local thisDeliveryPay = Config.BasePayPerDelivery[delivery.type] or 0
+                totalFragilePenalty = totalFragilePenalty + math.floor(thisDeliveryPay * penaltyPercent)
+            end
+        end
+        totalPay = totalPay - totalFragilePenalty
+    end
+
+    -- ==========================================
+    -- EXPRESSZ CSOMAG BÓNUSZ/BÜNTETÉS
+    -- ==========================================
+    local totalExpressBonus = 0
+    if Config.Express.enabled then
+        for _, delivery in ipairs(completedDeliveries) do
+            if delivery.isExpress then
+                local thisDeliveryPay = Config.BasePayPerDelivery[delivery.type] or 0
+                if delivery.expressSuccess then
+                    totalExpressBonus = totalExpressBonus + math.floor(thisDeliveryPay * (Config.Express.successMultiplier - 1))
+                else
+                    totalExpressBonus = totalExpressBonus - math.floor(thisDeliveryPay * (1 - Config.Express.failedMultiplier))
+                end
+            end
+        end
+        totalPay = totalPay + totalExpressBonus
+    end
+
+    -- ==========================================
+    -- SZEZONÁLIS ESEMÉNY
+    -- ==========================================
+    local seasonalEvent = GetActiveSeasonalEvent()
+    local seasonalBonus = 0
+    if seasonalEvent then
+        local seasonalMult = seasonalEvent.bonuses.payMultiplier or 1.0
+        if seasonalMult > 1.0 then
+            seasonalBonus = math.floor(totalPay * (seasonalMult - 1.0))
+            totalPay = totalPay + seasonalBonus
+        end
+        totalSkillPoints = math.floor(totalSkillPoints * (seasonalEvent.bonuses.skillMultiplier or 1.0))
+    end
+
+    -- Biztosítjuk hogy totalPay nem negatív
+    if totalPay < 0 then totalPay = 0 end
+
+    -- ==========================================
     -- SKILL PONTOK FRISSÍTÉS
     -- ==========================================
 
@@ -633,6 +933,12 @@ RegisterNetEvent('seerpg-futar:server:completeRound', function(completedDeliveri
         timeBonusMultiplier = timeBonusMultiplier,
         timeBonusLabel = timeBonusLabel,
         roundTime = elapsed,
+
+        -- Törékeny és expressz
+        fragilePenalty = totalFragilePenalty,
+        expressBonus = totalExpressBonus,
+        seasonalEvent = seasonalEvent and { name = seasonalEvent.name, payMultiplier = seasonalEvent.bonuses.payMultiplier } or nil,
+        seasonalBonus = seasonalBonus,
 
         -- Skill
         earnedSkillPoints = totalSkillPoints,

@@ -36,6 +36,19 @@ window.addEventListener('message', function(event) {
             hideAll();
             break;
 
+        // Törékeny és Expressz
+        case 'updateFragileIndicator':
+            updateFragileIndicator(data.data);
+            break;
+        case 'updateExpressTimer':
+            updateExpressTimer(data.data);
+            break;
+
+        // Bolt
+        case 'showShopPanel':
+            showShopPanel(data.data);
+            break;
+
         // Interakciós ikon rendszer
         case 'showInteractionIcons':
             showInteractionIcons(data.data);
@@ -236,6 +249,11 @@ document.getElementById('vehicle-close-btn').addEventListener('click', function(
     postNUI('closeUI', {});
 });
 
+document.getElementById('shop-close-btn').addEventListener('click', function() {
+    hideAll();
+    postNUI('closeShop', {});
+});
+
 // ==========================================
 // SKILL PANEL
 // ==========================================
@@ -332,6 +350,46 @@ function showRoundComplete(data) {
         skillBonusEl.textContent = formatNumber(data.skillBonus || 0) + ' Ft (' + skillMult + 'x)';
     } else {
         skillBonusEl.textContent = formatNumber(data.skillBonus || 0) + ' Ft';
+    }
+
+    // Törékeny büntetés sor
+    const fragileRow = document.getElementById('fragile-penalty-row');
+    if (fragileRow) {
+        if (data.fragilePenalty && data.fragilePenalty > 0) {
+            fragileRow.style.display = 'flex';
+            document.getElementById('fragile-penalty-value').textContent = '-' + formatNumber(data.fragilePenalty) + ' Ft';
+        } else {
+            fragileRow.style.display = 'none';
+        }
+    }
+
+    // Expressz bónusz sor
+    const expressRow = document.getElementById('express-bonus-row');
+    if (expressRow) {
+        if (data.expressBonus && data.expressBonus !== 0) {
+            expressRow.style.display = 'flex';
+            const expressVal = document.getElementById('express-bonus-value');
+            if (data.expressBonus > 0) {
+                expressVal.textContent = '+' + formatNumber(data.expressBonus) + ' Ft';
+                expressVal.className = 'detail-value green';
+            } else {
+                expressVal.textContent = formatNumber(data.expressBonus) + ' Ft';
+                expressVal.className = 'detail-value red';
+            }
+        } else {
+            expressRow.style.display = 'none';
+        }
+    }
+
+    // Szezonális esemény sor
+    const seasonalRow = document.getElementById('seasonal-bonus-row');
+    if (seasonalRow) {
+        if (data.seasonalEvent && data.seasonalBonus > 0) {
+            seasonalRow.style.display = 'flex';
+            document.getElementById('seasonal-bonus-value').textContent = '+' + formatNumber(data.seasonalBonus) + ' Ft (' + data.seasonalEvent.name + ')';
+        } else {
+            seasonalRow.style.display = 'none';
+        }
     }
 
     // Leszállított küldemények
@@ -439,6 +497,7 @@ function hideAll() {
     document.getElementById('skill-panel').classList.add('hidden');
     document.getElementById('round-panel').classList.add('hidden');
     document.getElementById('vehicle-panel').classList.add('hidden');
+    document.getElementById('shop-panel').classList.add('hidden');
     removeOverlay();
 }
 
@@ -523,6 +582,129 @@ function showVehicleSelector(data) {
 
         list.appendChild(card);
     });
+
+    panel.classList.remove('hidden');
+}
+
+
+
+// ==========================================
+// TÖRÉKENY CSOMAG INDIKÁTOR
+// ==========================================
+function updateFragileIndicator(data) {
+    const el = document.getElementById('fragile-indicator');
+    if (!data.show || !data.isFragile) {
+        el.classList.add('hidden');
+        return;
+    }
+    el.classList.remove('hidden');
+    const bar = document.getElementById('fragile-bar');
+    const percent = document.getElementById('fragile-percent');
+    const damage = Math.min(data.damage || 0, 100);
+    bar.style.height = damage + '%';
+    percent.textContent = Math.floor(damage) + '%';
+    // Color based on damage
+    if (damage >= 70) {
+        bar.style.background = '#ff4444';
+    } else if (damage >= 40) {
+        bar.style.background = '#ffaa00';
+    } else {
+        bar.style.background = '#4cff4c';
+    }
+}
+
+// ==========================================
+// EXPRESSZ TIMER
+// ==========================================
+function updateExpressTimer(data) {
+    const el = document.getElementById('express-timer');
+    if (!data.active) {
+        el.classList.add('hidden');
+        return;
+    }
+    el.classList.remove('hidden');
+    const timeEl = document.getElementById('express-time');
+    timeEl.textContent = formatTime(data.timeRemaining || 0);
+    if (data.timerColor === 'critical') {
+        timeEl.style.color = '#ff4444';
+    } else if (data.timerColor === 'warning') {
+        timeEl.style.color = '#ffaa00';
+    } else {
+        timeEl.style.color = '#4cff4c';
+    }
+}
+
+// ==========================================
+// FUTÁR BOLT PANEL
+// ==========================================
+function showShopPanel(data) {
+    hideAll();
+    showOverlay();
+
+    const panel = document.getElementById('shop-panel');
+    const list = document.getElementById('shop-list');
+    const moneyEl = document.getElementById('shop-money');
+
+    list.innerHTML = '';
+    moneyEl.textContent = 'Egyenleg: ' + formatNumber(data.playerMoney || 0) + ' Ft';
+
+    const upgrades = data.upgrades || {};
+    const purchased = data.purchased || {};
+    const skillLevel = data.skillLevel || 1;
+
+    // Kategória rendezés
+    const categories = {};
+    for (const [id, upgrade] of Object.entries(upgrades)) {
+        const cat = upgrade.category || 'other';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push({ ...upgrade, id: id });
+    }
+
+    for (const [catName, items] of Object.entries(categories)) {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'shop-category';
+
+        items.forEach(function(upgrade) {
+            const isOwned = purchased[upgrade.id] === true;
+            const isLocked = skillLevel < upgrade.minLevel;
+            const requiresMissing = upgrade.requires && !purchased[upgrade.requires];
+
+            const card = document.createElement('div');
+            card.className = 'shop-item' + (isOwned ? ' owned' : '') + (isLocked ? ' locked' : '') + (requiresMissing ? ' requires-missing' : '');
+
+            let statusText = '';
+            if (isOwned) {
+                statusText = '<span class="shop-item-status owned">✅ Megvásárolva</span>';
+            } else if (isLocked) {
+                statusText = '<span class="shop-item-status locked">🔒 ' + upgrade.minLevel + '★ szint kell</span>';
+            } else if (requiresMissing) {
+                statusText = '<span class="shop-item-status locked">⚠️ Előfeltétel szükséges</span>';
+            } else {
+                statusText = '<span class="shop-item-status available">' + formatNumber(upgrade.price) + ' Ft</span>';
+            }
+
+            card.innerHTML = `
+                <div class="shop-item-icon">${upgrade.icon || '📦'}</div>
+                <div class="shop-item-info">
+                    <div class="shop-item-name">${upgrade.name}</div>
+                    <div class="shop-item-desc">${upgrade.desc || ''}</div>
+                </div>
+                ${statusText}
+            `;
+
+            if (!isOwned && !isLocked && !requiresMissing) {
+                card.addEventListener('click', function() {
+                    postNUI('buyUpgrade', { upgradeId: upgrade.id });
+                    card.classList.add('owned');
+                    card.querySelector('.shop-item-status').innerHTML = '⏳ Feldolgozás...';
+                });
+            }
+
+            catDiv.appendChild(card);
+        });
+
+        list.appendChild(catDiv);
+    }
 
     panel.classList.remove('hidden');
 }

@@ -431,6 +431,12 @@ Config.Interaction = {
         take_from_vehicle = { icon = '📤', tooltip = 'Csomag kivétele', color = '#44aaff' },
         open_locker = { icon = '🔓', tooltip = 'Fiók kinyitása', color = '#ffaa00' },
         deliver = { icon = '📥', tooltip = 'Csomag berakása', color = '#4cff4c' },
+
+        -- Jármű javítás
+        repair_vehicle = { icon = '🔧', tooltip = 'Jármű javítása', color = '#ffaa00' },
+
+        -- Futár Bolt
+        open_shop = { icon = '🛒', tooltip = 'Futár Bolt', color = '#44ff44' },
     }
 }
 
