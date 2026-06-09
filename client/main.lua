@@ -1007,15 +1007,22 @@ function SpawnPalletWithPackages()
     RequestModel(palletModel)
     while not HasModelLoaded(palletModel) do Wait(10) end
 
-    palletBaseObj = CreateObject(palletModel, palletPos.x, palletPos.y, palletPos.z, false, false, false)
+    palletBaseObj = CreateObject(palletModel, palletPos.x, palletPos.y, palletPos.z - 0.5, false, false, false)
+    PlaceObjectOnGroundProperly(palletBaseObj)
     SetEntityHeading(palletBaseObj, heading)
     FreezeEntityPosition(palletBaseObj, true)
     SetEntityAsMissionEntity(palletBaseObj, true, true)
     SetModelAsNoLongerNeeded(palletModel)
 
+    -- A raklap tényleges Z pozícióját használjuk referenciának
+    local palletRealPos = GetEntityCoords(palletBaseObj)
+
     palletProps = {}
-    for i = 1, currentRound.totalDeliveries do
-        local slotIndex = ((i - 1) % #palletConfig.packageSlots) + 1
+    local numPackages = currentRound.totalDeliveries
+    local maxSlots = #palletConfig.packageSlots
+
+    for i = 1, numPackages do
+        local slotIndex = ((i - 1) % maxSlots) + 1
         local slot = palletConfig.packageSlots[slotIndex]
         local deliveryType = currentRound.deliveries[i].type
 
@@ -1028,9 +1035,12 @@ function SpawnPalletWithPackages()
         local rotatedX = slot.offset.x * math.cos(rad) - slot.offset.y * math.sin(rad)
         local rotatedY = slot.offset.x * math.sin(rad) + slot.offset.y * math.cos(rad)
 
-        local propX = palletPos.x + rotatedX
-        local propY = palletPos.y + rotatedY
-        local propZ = palletPos.z + slot.offset.z
+        -- Ha több csomag van mint slot, emeljük feljebb a rétegeket
+        local layerOffset = math.floor((i - 1) / maxSlots) * 0.35
+
+        local propX = palletRealPos.x + rotatedX
+        local propY = palletRealPos.y + rotatedY
+        local propZ = palletRealPos.z + slot.offset.z + layerOffset
 
         local prop = CreateObject(propModel, propX, propY, propZ, false, false, false)
         SetEntityHeading(prop, heading + slot.rotation.z)
@@ -1048,7 +1058,10 @@ function PickupFromPallet()
 
     local targetIndex = nil
     for i, pallet in ipairs(palletProps) do
-        if not pallet.taken then targetIndex = i break end
+        if not pallet.taken and pallet.object and DoesEntityExist(pallet.object) then
+            targetIndex = i
+            break
+        end
     end
     if not targetIndex then return end
 
@@ -1066,8 +1079,11 @@ function PickupFromPallet()
     TaskPlayAnim(playerPed, anim.dict, anim.name, 8.0, -8.0, anim.duration, anim.flag, 0, false, false, false)
     Wait(anim.duration * 0.6)
 
-    if DoesEntityExist(palletData.object) then
+    -- Csomag eltűntetése a raklapról
+    if palletData.object and DoesEntityExist(palletData.object) then
+        SetEntityAsMissionEntity(palletData.object, true, true)
         DeleteEntity(palletData.object)
+        palletData.object = nil
     end
     palletProps[targetIndex].taken = true
 
@@ -1592,12 +1608,20 @@ end
 -- PROP KEZELÉS
 -- ==========================================
 function GetPropNameForType(deliveryType)
-    if deliveryType == 'level' then return Config.Props.letter
-    elseif deliveryType == 'small' then return Config.Props.package_small
-    elseif deliveryType == 'medium' then return Config.Props.package_medium
-    elseif deliveryType == 'large' then return Config.Props.package_large
+    if deliveryType == 'level' then
+        return Config.Props.letter
+    elseif deliveryType == 'small' then
+        local variants = Config.Props.package_small
+        return variants[math.random(1, #variants)]
+    elseif deliveryType == 'medium' then
+        local variants = Config.Props.package_medium
+        return variants[math.random(1, #variants)]
+    elseif deliveryType == 'large' then
+        local variants = Config.Props.package_large
+        return variants[math.random(1, #variants)]
     end
-    return Config.Props.package_small
+    local variants = Config.Props.package_small
+    return variants[math.random(1, #variants)]
 end
 
 function AttachPackageProp(ped, deliveryType)

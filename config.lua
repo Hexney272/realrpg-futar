@@ -256,11 +256,36 @@ Config.DeliveryBlip = {
 }
 
 -- Prop-ok (kézben tartott tárgyak) - Custom stream propok
+-- Több variáns van minden méretből - random választódik!
 Config.Props = {
-    package_small = 'bzzz_prop_custom_box_1a',
-    package_medium = 'bzzz_prop_custom_box_2a',
-    package_large = 'bzzz_prop_custom_box_3a',
     letter = 'prop_cs_documents_01',
+
+    -- Csomag (S) variánsok: bzzz_prop_custom_box_1a - 1e
+    package_small = {
+        'bzzz_prop_custom_box_1a',
+        'bzzz_prop_custom_box_1b',
+        'bzzz_prop_custom_box_1c',
+        'bzzz_prop_custom_box_1d',
+        'bzzz_prop_custom_box_1e',
+    },
+
+    -- Csomag (M) variánsok: bzzz_prop_custom_box_2a - 2e
+    package_medium = {
+        'bzzz_prop_custom_box_2a',
+        'bzzz_prop_custom_box_2b',
+        'bzzz_prop_custom_box_2c',
+        'bzzz_prop_custom_box_2d',
+        'bzzz_prop_custom_box_2e',
+    },
+
+    -- Csomag (L) variánsok: bzzz_prop_custom_box_3a - 3e
+    package_large = {
+        'bzzz_prop_custom_box_3a',
+        'bzzz_prop_custom_box_3b',
+        'bzzz_prop_custom_box_3c',
+        'bzzz_prop_custom_box_3d',
+        'bzzz_prop_custom_box_3e',
+    },
 }
 
 -- ==========================================
@@ -274,23 +299,23 @@ Config.Pallet = {
     -- Csomagok elhelyezése a raklapon (offset-ek a raklaptól)
     -- Soronként és oszloponként rendezve
     packageSlots = {
-        -- Első sor (alsó)
-        { offset = vector3(-0.5, -0.4, 0.3), rotation = vector3(0.0, 0.0, 0.0) },
-        { offset = vector3(0.0, -0.4, 0.3), rotation = vector3(0.0, 0.0, 5.0) },
-        { offset = vector3(0.5, -0.4, 0.3), rotation = vector3(0.0, 0.0, -3.0) },
-        { offset = vector3(-0.5, 0.0, 0.3), rotation = vector3(0.0, 0.0, 2.0) },
-        { offset = vector3(0.0, 0.0, 0.3), rotation = vector3(0.0, 0.0, -5.0) },
-        { offset = vector3(0.5, 0.0, 0.3), rotation = vector3(0.0, 0.0, 0.0) },
-        { offset = vector3(-0.5, 0.4, 0.3), rotation = vector3(0.0, 0.0, 4.0) },
-        { offset = vector3(0.0, 0.4, 0.3), rotation = vector3(0.0, 0.0, -2.0) },
+        -- Első sor (alsó - raklap tetején)
+        { offset = vector3(-0.5, -0.4, 0.0), rotation = vector3(0.0, 0.0, 0.0) },
+        { offset = vector3(0.0, -0.4, 0.0), rotation = vector3(0.0, 0.0, 5.0) },
+        { offset = vector3(0.5, -0.4, 0.0), rotation = vector3(0.0, 0.0, -3.0) },
+        { offset = vector3(-0.5, 0.0, 0.0), rotation = vector3(0.0, 0.0, 2.0) },
+        { offset = vector3(0.0, 0.0, 0.0), rotation = vector3(0.0, 0.0, -5.0) },
+        { offset = vector3(0.5, 0.0, 0.0), rotation = vector3(0.0, 0.0, 0.0) },
+        { offset = vector3(-0.5, 0.4, 0.0), rotation = vector3(0.0, 0.0, 4.0) },
+        { offset = vector3(0.0, 0.4, 0.0), rotation = vector3(0.0, 0.0, -2.0) },
         -- Második sor (felső)
-        { offset = vector3(-0.5, -0.4, 0.65), rotation = vector3(0.0, 0.0, 8.0) },
-        { offset = vector3(0.0, -0.4, 0.65), rotation = vector3(0.0, 0.0, -4.0) },
-        { offset = vector3(0.5, -0.4, 0.65), rotation = vector3(0.0, 0.0, 3.0) },
-        { offset = vector3(-0.5, 0.0, 0.65), rotation = vector3(0.0, 0.0, -6.0) },
-        { offset = vector3(0.0, 0.0, 0.65), rotation = vector3(0.0, 0.0, 0.0) },
-        { offset = vector3(0.5, 0.0, 0.65), rotation = vector3(0.0, 0.0, 5.0) },
-        { offset = vector3(-0.5, 0.4, 0.65), rotation = vector3(0.0, 0.0, -3.0) },
+        { offset = vector3(-0.5, -0.4, 0.35), rotation = vector3(0.0, 0.0, 8.0) },
+        { offset = vector3(0.0, -0.4, 0.35), rotation = vector3(0.0, 0.0, -4.0) },
+        { offset = vector3(0.5, -0.4, 0.35), rotation = vector3(0.0, 0.0, 3.0) },
+        { offset = vector3(-0.5, 0.0, 0.35), rotation = vector3(0.0, 0.0, -6.0) },
+        { offset = vector3(0.0, 0.0, 0.35), rotation = vector3(0.0, 0.0, 0.0) },
+        { offset = vector3(0.5, 0.0, 0.35), rotation = vector3(0.0, 0.0, 5.0) },
+        { offset = vector3(-0.5, 0.4, 0.35), rotation = vector3(0.0, 0.0, -3.0) },
     },
 
     -- Játékos felvétel távolság a raklaptól
@@ -312,23 +337,23 @@ Config.VehicleCargo = {
 
     -- Csomagok pozíciói a csomagtérben (offset-ek a jármű eredetétől)
     cargoSlots = {
-        { offset = vector3(-0.3, -1.5, 0.4), rotation = vector3(0.0, 0.0, 0.0) },
-        { offset = vector3(0.3, -1.5, 0.4), rotation = vector3(0.0, 0.0, 5.0) },
-        { offset = vector3(-0.3, -2.0, 0.4), rotation = vector3(0.0, 0.0, -3.0) },
-        { offset = vector3(0.3, -2.0, 0.4), rotation = vector3(0.0, 0.0, 2.0) },
-        { offset = vector3(-0.3, -2.5, 0.4), rotation = vector3(0.0, 0.0, 0.0) },
-        { offset = vector3(0.3, -2.5, 0.4), rotation = vector3(0.0, 0.0, -5.0) },
+        { offset = vector3(-0.3, -1.5, -0.2), rotation = vector3(0.0, 0.0, 0.0) },
+        { offset = vector3(0.3, -1.5, -0.2), rotation = vector3(0.0, 0.0, 5.0) },
+        { offset = vector3(-0.3, -2.0, -0.2), rotation = vector3(0.0, 0.0, -3.0) },
+        { offset = vector3(0.3, -2.0, -0.2), rotation = vector3(0.0, 0.0, 2.0) },
+        { offset = vector3(-0.3, -2.5, -0.2), rotation = vector3(0.0, 0.0, 0.0) },
+        { offset = vector3(0.3, -2.5, -0.2), rotation = vector3(0.0, 0.0, -5.0) },
         -- Felső réteg
-        { offset = vector3(-0.3, -1.5, 0.8), rotation = vector3(0.0, 0.0, 4.0) },
-        { offset = vector3(0.3, -1.5, 0.8), rotation = vector3(0.0, 0.0, -2.0) },
-        { offset = vector3(-0.3, -2.0, 0.8), rotation = vector3(0.0, 0.0, 0.0) },
-        { offset = vector3(0.3, -2.0, 0.8), rotation = vector3(0.0, 0.0, 6.0) },
-        { offset = vector3(-0.3, -2.5, 0.8), rotation = vector3(0.0, 0.0, -4.0) },
-        { offset = vector3(0.3, -2.5, 0.8), rotation = vector3(0.0, 0.0, 0.0) },
+        { offset = vector3(-0.3, -1.5, 0.15), rotation = vector3(0.0, 0.0, 4.0) },
+        { offset = vector3(0.3, -1.5, 0.15), rotation = vector3(0.0, 0.0, -2.0) },
+        { offset = vector3(-0.3, -2.0, 0.15), rotation = vector3(0.0, 0.0, 0.0) },
+        { offset = vector3(0.3, -2.0, 0.15), rotation = vector3(0.0, 0.0, 6.0) },
+        { offset = vector3(-0.3, -2.5, 0.15), rotation = vector3(0.0, 0.0, -4.0) },
+        { offset = vector3(0.3, -2.5, 0.15), rotation = vector3(0.0, 0.0, 0.0) },
         -- Harmadik réteg (ha sok csomag van)
-        { offset = vector3(0.0, -1.7, 1.2), rotation = vector3(0.0, 0.0, 3.0) },
-        { offset = vector3(0.0, -2.2, 1.2), rotation = vector3(0.0, 0.0, -3.0) },
-        { offset = vector3(0.0, -2.7, 1.2), rotation = vector3(0.0, 0.0, 0.0) },
+        { offset = vector3(0.0, -1.7, 0.5), rotation = vector3(0.0, 0.0, 3.0) },
+        { offset = vector3(0.0, -2.2, 0.5), rotation = vector3(0.0, 0.0, -3.0) },
+        { offset = vector3(0.0, -2.7, 0.5), rotation = vector3(0.0, 0.0, 0.0) },
     },
 
     -- Berakás interakció pont (a jármű oldalán, ahonnan berakod)
@@ -936,13 +961,8 @@ Config.SeasonalEvents = {
 -- Nagyobb csomag = nagyobb prop + lassabb mozgás
 -- ==========================================
 Config.PackageVisuals = {
-    -- Prop modellek méret szerint (custom stream propok)
-    props = {
-        ['level']  = { model = 'prop_cs_documents_01', scale = 1.0 },
-        ['small']  = { model = 'bzzz_prop_custom_box_1a', scale = 1.0 },
-        ['medium'] = { model = 'bzzz_prop_custom_box_2a', scale = 1.0 },
-        ['large']  = { model = 'bzzz_prop_custom_box_3a', scale = 1.0 },
-    },
+    -- Prop modellek: a Config.Props táblából random választódnak (lásd fent)
+    -- Itt csak a méret-specifikus beállítások vannak
 
     -- Mozgás lassítás méret szerint (1.0 = normál sebesség)
     moveSpeedMultiplier = {
