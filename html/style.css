@@ -1,0 +1,709 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: transparent;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================
+   JOB HUD - Jobb felső sarok
+   ========================================== */
+.hud {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+.hud-content {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border: 2px solid #2a2a4a;
+    border-radius: 10px;
+    padding: 14px 18px;
+    min-width: 200px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(15, 52, 96, 0.2);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.hud-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hud-icon {
+    font-size: 18px;
+}
+
+.hud-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.hud-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+}
+
+.hud-label {
+    color: #8888aa;
+    font-size: 12px;
+}
+
+.hud-value {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.hud-current {
+    color: #ffaa00;
+    font-size: 11px;
+    max-width: 120px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hud-progress-bar {
+    margin-top: 10px;
+    height: 4px;
+    background: #2a2a4a;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.hud-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4cff4c, #00cc44);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    width: 0%;
+}
+
+/* HUD time warning colors */
+.hud-time-warning {
+    color: #ffaa00 !important;
+}
+
+.hud-time-critical {
+    color: #ff4444 !important;
+    animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* ==========================================
+   PANEL ALAP STÍLUSOK
+   ========================================== */
+.panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 200;
+}
+
+.panel-content {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border: 2px solid #2a2a4a;
+    border-radius: 12px;
+    padding: 24px 32px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 60px rgba(15, 52, 96, 0.3);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.panel-close-area {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================
+   SKILL PANEL
+   ========================================== */
+.skill-content {
+    min-width: 320px;
+    text-align: center;
+}
+
+.skill-title {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+
+.skill-title span {
+    color: #e0e0e0;
+}
+
+.stars-container {
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.star {
+    font-size: 20px;
+    transition: all 0.2s ease;
+}
+
+.star.filled {
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
+.star.empty {
+    color: #3a3a5a;
+}
+
+.skill-points {
+    color: #b0b0b0;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.points-green {
+    color: #4cff4c;
+    font-weight: 700;
+}
+
+.next-level {
+    color: #707090;
+    font-size: 13px;
+}
+
+.next-level span {
+    color: #9090b0;
+    font-weight: 600;
+}
+
+/* ==========================================
+   ROUND COMPLETE PANEL
+   ========================================== */
+.round-content {
+    min-width: 380px;
+    max-width: 440px;
+}
+
+.round-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.round-title {
+    font-size: 20px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #ff4444, #ffaa00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.round-subtitle {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+/* ==========================================
+   DETAIL ROWS
+   ========================================== */
+.round-details {
+    margin-bottom: 18px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: #b0b0c0;
+    font-size: 13px;
+}
+
+.detail-value {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.detail-value.green {
+    color: #4cff4c;
+}
+
+.detail-value.red {
+    color: #ff4444;
+}
+
+.detail-value.purple {
+    color: #cc44ff;
+}
+
+.detail-value .blue,
+.blue-yellow .blue {
+    color: #44aaff;
+}
+
+.boosted-pay {
+    color: #ffdd00;
+    font-size: 13px;
+    margin-left: 6px;
+    font-weight: 700;
+}
+
+/* ==========================================
+   DELIVERIES SECTION
+   ========================================== */
+.deliveries-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 14px;
+}
+
+.deliveries-title {
+    color: #b0b0c0;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.deliveries-list {
+    list-style: none;
+    padding-left: 8px;
+}
+
+.deliveries-list li {
+    color: #d0d0e0;
+    font-size: 13px;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.deliveries-list li::before {
+    content: '•';
+    color: #6a6a8a;
+    font-size: 16px;
+}
+
+.deliveries-list li span {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* ==========================================
+   OVERLAY (háttér sötétítés panelek mögött)
+   ========================================== */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 150;
+    opacity: 0;
+    animation: overlayFadeIn 0.2s ease forwards;
+}
+
+@keyframes overlayFadeIn {
+    to { opacity: 1; }
+}
+
+/* ==========================================
+   INTERAKCIÓS IKON RENDSZER
+   Kattintható ikonok a 3D világban
+   ========================================== */
+.interaction-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.interaction-layer.active {
+    pointer-events: auto;
+    cursor: default;
+}
+
+/* Egyedi interakciós ikon */
+.interact-icon {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+    animation: iconPopIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    opacity: 0;
+}
+
+@keyframes iconPopIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.3);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.interact-icon:hover {
+    transform: translate(-50%, -50%) scale(1.2);
+    z-index: 10;
+}
+
+.interact-icon:active {
+    transform: translate(-50%, -50%) scale(0.9);
+}
+
+/* Ikon kör (emoji konténer) */
+.interact-icon-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(15, 52, 96, 0.95));
+    border: 2.5px solid rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(68, 170, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Glow effekt hover-re */
+.interact-icon:hover .interact-icon-circle {
+    border-color: var(--icon-color, #44aaff);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        0 0 25px var(--icon-glow, rgba(68, 170, 255, 0.4)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Belső fény animáció */
+.interact-icon-circle::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+    animation: iconShimmer 3s ease infinite;
+    pointer-events: none;
+}
+
+@keyframes iconShimmer {
+    0%, 100% { opacity: 0.3; transform: rotate(0deg); }
+    50% { opacity: 0.8; transform: rotate(180deg); }
+}
+
+/* Tooltip szöveg (ikon alatt) */
+.interact-icon-tooltip {
+    background: rgba(0, 0, 0, 0.85);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.interact-icon:hover .interact-icon-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Pulzáló gyűrű (figyelem felhívás) */
+.interact-icon-pulse {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid var(--icon-color, #44aaff);
+    animation: iconPulse 2s ease-out infinite;
+    pointer-events: none;
+}
+
+@keyframes iconPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(1.8);
+        opacity: 0;
+    }
+}
+
+/* ==========================================
+   ALT HINT (Jobb alsó sarok)
+   ========================================== */
+.alt-hint {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(145deg, rgba(26, 26, 46, 0.9), rgba(15, 52, 96, 0.9));
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 10px 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    animation: hintFadeIn 0.3s ease;
+}
+
+@keyframes hintFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.alt-hint-key {
+    background: linear-gradient(180deg, #3a3a5a, #2a2a4a);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    letter-spacing: 0.5px;
+    animation: keyGlow 2s ease infinite;
+}
+
+@keyframes keyGlow {
+    0%, 100% { border-color: rgba(255, 255, 255, 0.2); }
+    50% { border-color: rgba(68, 170, 255, 0.6); }
+}
+
+.alt-hint-text {
+    color: #a0a0c0;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+
+
+/* ==========================================
+   JÁRMŰ VÁLASZTÓ PANEL
+   ========================================== */
+.vehicle-content {
+    min-width: 360px;
+    max-width: 420px;
+}
+
+.vehicle-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.vehicle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vehicle-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.vehicle-card:hover {
+    background: rgba(68, 170, 255, 0.08);
+    border-color: rgba(68, 170, 255, 0.4);
+    transform: translateX(4px);
+}
+
+.vehicle-card.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.vehicle-card.locked:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: none;
+}
+
+.vehicle-card.selected {
+    border-color: #4cff4c;
+    background: rgba(76, 255, 76, 0.08);
+}
+
+.vehicle-card-icon {
+    font-size: 28px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.vehicle-card-info {
+    flex: 1;
+}
+
+.vehicle-card-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 3px;
+}
+
+.vehicle-card-desc {
+    font-size: 11px;
+    color: #8888aa;
+}
+
+.vehicle-card-stats {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.vehicle-stat {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #aaaacc;
+}
+
+.vehicle-card-lock {
+    font-size: 12px;
+    color: #ff4444;
+    white-space: nowrap;
+}
+
+/* ==========================================
+   RANG MEGJELENÍTÉS (Skill panelen)
+   ========================================== */
+.skill-rank {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================
+   IDŐBÓNUSZ (Round panelen)
+   ========================================== */
+.round-time-bonus {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffaa00;
+    margin-bottom: 12px;
+    min-height: 20px;
+}
+
+.detail-value.orange {
+    color: #ffaa00;
+}

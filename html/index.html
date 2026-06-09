@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RealRPG Futár</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Interakciós ikonok konténer -->
+    <div id="interaction-layer" class="interaction-layer hidden"></div>
+
+    <!-- ALT gomb hint -->
+    <div id="alt-hint" class="alt-hint hidden">
+        <span class="alt-hint-key">ALT</span>
+        <span class="alt-hint-text">Interakció</span>
+    </div>
+
+    <!-- Job HUD -->
+    <div id="job-hud" class="hud hidden">
+        <div class="hud-content">
+            <div class="hud-header">
+                <span class="hud-icon">📦</span>
+                <span class="hud-title">FUTÁR</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">Idő:</span>
+                <span class="hud-value" id="hud-time">15:00</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">Kézbesítés:</span>
+                <span class="hud-value" id="hud-deliveries">0/0</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">Aktuális:</span>
+                <span class="hud-value hud-current" id="hud-current">-</span>
+            </div>
+            <div class="hud-progress-bar">
+                <div class="hud-progress-fill" id="hud-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skill Panel -->
+    <div id="skill-panel" class="panel hidden">
+        <div class="panel-content skill-content">
+            <div class="panel-close-area">
+                <button class="close-btn" id="skill-close-btn">&times;</button>
+            </div>
+            <div class="skill-title">Munka skill: <span id="skill-job-label">Futár</span></div>
+            <div class="skill-rank" id="skill-rank"></div>
+            <div class="stars-container" id="stars-container"></div>
+            <div class="skill-points">
+                Jelenleg <span id="current-points" class="points-green">0</span> pontod van
+            </div>
+            <div class="next-level">
+                Következő szint: <span id="next-level-points">0</span> pont
+            </div>
+        </div>
+    </div>
+
+    <!-- Jármű Választó Panel -->
+    <div id="vehicle-panel" class="panel hidden">
+        <div class="panel-content vehicle-content">
+            <div class="panel-close-area">
+                <button class="close-btn" id="vehicle-close-btn">&times;</button>
+            </div>
+            <div class="vehicle-title">Válassz járművet</div>
+            <div class="vehicle-list" id="vehicle-list">
+                <!-- Dinamikusan generálódik JS-ből -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Round Complete Panel -->
+    <div id="round-panel" class="panel hidden">
+        <div class="panel-content round-content">
+            <div class="round-header">
+                <span class="round-title">TELJESÍTETT KÖR</span>
+                <button class="close-btn" id="round-close-btn">&times;</button>
+            </div>
+            <div class="round-subtitle">Sikeresen teljesítetted a körödet!</div>
+            <div class="round-time-bonus" id="round-time-bonus"></div>
+
+            <div class="round-details">
+                <div class="detail-row">
+                    <span class="detail-label">Munka skill bónusz:</span>
+                    <span class="detail-value green" id="skill-bonus">0 Ft</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">RealRPG Club tagsági bónusz:</span>
+                    <span class="detail-value red" id="club-bonus">0 Ft</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Munka fizetés boost:</span>
+                    <span class="detail-value blue-yellow">
+                        <span class="blue" id="pay-boost">1.0x</span>
+                        <span class="boosted-pay" id="boosted-pay"></span>
+                    </span>
+                </div>
+                <div class="detail-row" id="time-bonus-row" style="display:none">
+                    <span class="detail-label">Időbónusz:</span>
+                    <span class="detail-value orange" id="time-bonus-value">0 Ft</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Gyűjtött munka skill:</span>
+                    <span class="detail-value purple" id="earned-skill">0 pont</span>
+                </div>
+            </div>
+
+            <div class="deliveries-section">
+                <div class="deliveries-title">Leszállított küldemények:</div>
+                <ul class="deliveries-list" id="deliveries-list">
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
