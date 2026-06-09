@@ -225,29 +225,8 @@ Config.PackagesPerLocker = {
 }
 
 -- ==========================================
--- MARKER ÉS BLIP BEÁLLÍTÁSOK
+-- BLIP BEÁLLÍTÁSOK
 -- ==========================================
-Config.Markers = {
-    depot = {
-        type = 1,
-        color = { r = 50, g = 200, b = 50, a = 150 },
-        size = vector3(1.5, 1.5, 1.0),
-        drawDistance = 20.0
-    },
-    pickup = {
-        type = 1,
-        color = { r = 50, g = 100, b = 255, a = 150 },
-        size = vector3(1.0, 1.0, 0.5),
-        drawDistance = 15.0
-    },
-    delivery = {
-        type = 1,
-        color = { r = 255, g = 165, b = 0, a = 150 },
-        size = vector3(1.0, 1.0, 0.5),
-        drawDistance = 15.0
-    }
-}
-
 Config.DeliveryBlip = {
     sprite = 501,
     color = 5,

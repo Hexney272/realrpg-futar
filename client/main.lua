@@ -110,18 +110,38 @@ end)
 -- FIX LOCKEREK SPAWNOLÁSA (mindig jelen vannak)
 -- ==========================================
 function SpawnAllLockers()
-    local model = GetHashKey(Config.Locker.model)
+    local modelName = Config.Locker.model
+    local model = GetHashKey(modelName)
+
+    -- Modell betöltés timeout-tal (max 10 mp)
     RequestModel(model)
-    while not HasModelLoaded(model) do Wait(10) end
+    local timeout = 0
+    while not HasModelLoaded(model) do
+        Wait(100)
+        timeout = timeout + 100
+        if timeout > 10000 then
+            print('[RealRPG-Futar] ^1HIBA: Nem sikerült betölteni a locker modellt: ' .. modelName .. '^0')
+            print('[RealRPG-Futar] ^1Ellenőrizd hogy a stream mappában benne van a .ydr és .ytyp fájl!^0')
+            return
+        end
+    end
+
+    print('[RealRPG-Futar] Locker modell betöltve: ' .. modelName)
 
     for _, lockerPoint in ipairs(Config.LockerPoints) do
-        -- Locker prop
-        local obj = CreateObject(model, lockerPoint.coords.x, lockerPoint.coords.y, lockerPoint.coords.z, false, false, false)
-        SetEntityHeading(obj, lockerPoint.heading)
-        FreezeEntityPosition(obj, true)
-        SetEntityAsMissionEntity(obj, true, true)
+        -- Locker prop spawn
+        local obj = CreateObject(model, lockerPoint.coords.x, lockerPoint.coords.y, lockerPoint.coords.z - 1.0, false, false, false)
 
-        allLockerObjects[lockerPoint.id] = obj
+        if obj and DoesEntityExist(obj) then
+            PlaceObjectOnGroundProperly(obj)
+            SetEntityHeading(obj, lockerPoint.heading)
+            FreezeEntityPosition(obj, true)
+            SetEntityAsMissionEntity(obj, true, true)
+
+            allLockerObjects[lockerPoint.id] = obj
+        else
+            print('[RealRPG-Futar] ^1HIBA: Locker nem jött létre: ' .. lockerPoint.label .. '^0')
+        end
 
         -- Blip
         local blip = AddBlipForCoord(lockerPoint.coords)
@@ -137,10 +157,7 @@ function SpawnAllLockers()
     end
 
     SetModelAsNoLongerNeeded(model)
-
-    if Config.Debug then
-        print('[RealRPG-Futar] ' .. #Config.LockerPoints .. ' fix locker spawnolva.')
-    end
+    print('[RealRPG-Futar] ' .. #Config.LockerPoints .. ' fix locker spawnolva.')
 end
 
 -- ==========================================
@@ -616,82 +633,12 @@ RegisterNUICallback('closeUI', function(data, cb)
 end)
 
 -- ==========================================
--- MARKER RAJZOLÁS (vizuális segítség, NEM interakció)
+-- VIZUÁLIS JELZÉSEK (markerek helyett NUI ikonok adják a jelzést)
 -- ==========================================
 function DrawActiveMarkers()
-    local playerCoords = GetEntityCoords(PlayerPedId())
-
-    -- Depó marker
-    local distToDepot = #(playerCoords - Config.Depot.coords)
-    if distToDepot < 30.0 then
-        local marker = Config.Markers.depot
-        DrawMarker(marker.type,
-            Config.Depot.coords.x, Config.Depot.coords.y, Config.Depot.coords.z - 1.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            marker.size.x, marker.size.y, marker.size.z,
-            marker.color.r, marker.color.g, marker.color.b, marker.color.a,
-            false, false, 2, false, nil, nil, false)
-    end
-
-    -- Raklap marker (bepakolás fázis)
-    if loadingPhase and not isCarrying then
-        local palletCoords = GetPalletWorldCoords()
-        local distToPallet = #(playerCoords - palletCoords)
-        if distToPallet < 8.0 then
-            local marker = Config.Markers.pickup
-            DrawMarker(marker.type,
-                palletCoords.x, palletCoords.y, palletCoords.z - 1.0,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                marker.size.x, marker.size.y, marker.size.z,
-                marker.color.r, marker.color.g, marker.color.b, marker.color.a,
-                false, false, 2, false, nil, nil, false)
-        end
-    end
-
-    -- Jármű load pont marker (bepakolás fázis)
-    if loadingPhase and jobVehicle and DoesEntityExist(jobVehicle) then
-        local loadPoint = GetVehicleLoadPoint()
-        local distToLoad = #(playerCoords - loadPoint)
-        if distToLoad < 5.0 then
-            DrawMarker(25,
-                loadPoint.x, loadPoint.y, loadPoint.z - 0.95,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.8, 0.8, 0.5,
-                50, 150, 255, 120,
-                false, false, 2, false, nil, nil, false)
-        end
-    end
-
-    -- Kézbesítési pont marker + Locker
-    if isOnRound and currentRound.pickedUp and currentRound.currentDeliveryIndex <= #currentRound.deliveries then
-        local delivery = currentRound.deliveries[currentRound.currentDeliveryIndex]
-        if delivery then
-            local distToDelivery = #(playerCoords - delivery.coords)
-            if distToDelivery < 30.0 then
-                local marker = Config.Markers.delivery
-                DrawMarker(marker.type,
-                    delivery.coords.x, delivery.coords.y, delivery.coords.z - 1.0,
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                    marker.size.x, marker.size.y, marker.size.z,
-                    marker.color.r, marker.color.g, marker.color.b, marker.color.a,
-                    false, false, 2, false, nil, nil, false)
-            end
-
-            -- Locker marker (aktív target locker kiemelés)
-            if currentLockerTarget and currentLockerTarget.lockerId then
-                local lockerObj = allLockerObjects[currentLockerTarget.lockerId]
-                if lockerObj and DoesEntityExist(lockerObj) then
-                    local lockerCoords = GetEntityCoords(lockerObj)
-                    DrawMarker(25,
-                        lockerCoords.x, lockerCoords.y, lockerCoords.z - 0.95,
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                        0.6, 0.6, 0.4,
-                        255, 165, 0, 120,
-                        false, false, 2, false, nil, nil, false)
-                end
-            end
-        end
-    end
+    -- A régi kör alakú DrawMarker-ek eltávolítva.
+    -- Az interakciós ikon rendszer (ALT) adja a vizuális visszajelzést.
+    -- Nincs szükség extra markerekre.
 end
 
 -- ==========================================
