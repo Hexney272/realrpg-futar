@@ -103,6 +103,62 @@
         </div>
     </div>
 
+    <!-- Munkaválasztó Panel (kör indításkor) -->
+    <div id="job-select-panel" class="panel hidden">
+        <div class="panel-content job-select-content">
+            <div class="panel-close-area">
+                <button class="close-btn" id="job-select-close-btn">&times;</button>
+            </div>
+            <div class="job-select-title">📋 Megrendelés kiválasztása</div>
+
+            <!-- Csomagpont választó -->
+            <div class="job-select-section">
+                <div class="job-select-label">Csomagpont:</div>
+                <div class="job-select-lockers" id="job-select-lockers">
+                    <!-- Dinamikusan generálódik -->
+                </div>
+            </div>
+
+            <!-- Csomag szám -->
+            <div class="job-select-section">
+                <div class="job-select-label">Csomagok száma:</div>
+                <div class="job-select-slider-row">
+                    <button class="job-select-btn-minus" id="pkg-minus">−</button>
+                    <span class="job-select-value" id="pkg-count">3</span>
+                    <button class="job-select-btn-plus" id="pkg-plus">+</button>
+                </div>
+            </div>
+
+            <!-- Idő limit -->
+            <div class="job-select-section">
+                <div class="job-select-label">Időlimit:</div>
+                <div class="job-select-time-options" id="job-select-time">
+                    <button class="time-option" data-time="300">5 perc</button>
+                    <button class="time-option selected" data-time="600">10 perc</button>
+                    <button class="time-option" data-time="900">15 perc</button>
+                </div>
+            </div>
+
+            <!-- Törékeny csomag -->
+            <div class="job-select-section">
+                <div class="job-select-label">Csomag típus:</div>
+                <div class="job-select-fragile-row">
+                    <button class="fragile-option selected" id="fragile-no" data-fragile="false">📦 Normál</button>
+                    <button class="fragile-option" id="fragile-yes" data-fragile="true">⚠️ Törékeny (+50% Ft)</button>
+                </div>
+            </div>
+
+            <!-- Becsült fizetés -->
+            <div class="job-select-estimate">
+                <span class="estimate-label">Becsült fizetés:</span>
+                <span class="estimate-value" id="job-estimate-pay">~ 0 Ft</span>
+            </div>
+
+            <!-- Indítás gomb -->
+            <button class="job-select-start-btn" id="job-select-start">🚚 Megrendelés indítása</button>
+        </div>
+    </div>
+
     <!-- Round Complete Panel -->
     <div id="round-panel" class="panel hidden">
         <div class="panel-content round-content">

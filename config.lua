@@ -625,6 +625,9 @@ Config.Fragile = {
     -- Milyen eséllyel legyen egy csomag törékeny (%)
     chance = 25,  -- 25% esély hogy törékeny lesz
 
+    -- Induló sérülés % (a jelző ennyi %-on indul, nem 0-ról!)
+    startDamage = 60,  -- 60%-on indul a jelző (csak 40% "mozgástér" van mielőtt tönkremegy)
+
     -- Sérülés források és értékek (0-100 skála, 100 = teljesen tönkrement)
     damage = {
         -- Ütközés (jármű baleset)

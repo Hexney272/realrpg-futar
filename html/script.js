@@ -29,6 +29,9 @@ window.addEventListener('message', function(event) {
         case 'showVehicleSelector':
             showVehicleSelector(data.data);
             break;
+        case 'showJobSelector':
+            showJobSelector(data.data);
+            break;
         case 'updateHUD':
             updateHUD(data.data);
             break;
@@ -498,6 +501,7 @@ function hideAll() {
     document.getElementById('round-panel').classList.add('hidden');
     document.getElementById('vehicle-panel').classList.add('hidden');
     document.getElementById('shop-panel').classList.add('hidden');
+    document.getElementById('job-select-panel').classList.add('hidden');
     removeOverlay();
 }
 
@@ -707,4 +711,155 @@ function showShopPanel(data) {
     }
 
     panel.classList.remove('hidden');
+}
+
+
+
+// ==========================================
+// MUNKAVÁLASZTÓ PANEL
+// ==========================================
+let jobSelectState = {
+    selectedLocker: null,
+    packageCount: 3,
+    timeLimit: 600,
+    isFragile: false,
+    lockers: [],
+    basePay: 10500
+};
+
+function showJobSelector(data) {
+    hideAll();
+    showOverlay();
+
+    const panel = document.getElementById('job-select-panel');
+    const lockerList = document.getElementById('job-select-lockers');
+
+    // Locker adatok mentése
+    jobSelectState.lockers = data.lockers || [];
+    jobSelectState.selectedLocker = null;
+    jobSelectState.packageCount = 3;
+    jobSelectState.timeLimit = 600;
+    jobSelectState.isFragile = false;
+    jobSelectState.basePay = data.basePay || 10500;
+
+    // Locker opciók generálása
+    lockerList.innerHTML = '';
+    jobSelectState.lockers.forEach(function(locker) {
+        const div = document.createElement('div');
+        div.className = 'locker-option';
+        div.dataset.lockerId = locker.id;
+
+        const distLabel = locker.distanceCategory || 'near';
+        const distLabels = { near: 'Közeli', medium: 'Közepes', far: 'Távoli', veryFar: 'N. távoli' };
+
+        div.innerHTML = `
+            <span class="locker-option-name">${locker.label}</span>
+            <span class="locker-option-dist ${distLabel}">${distLabels[distLabel] || distLabel}</span>
+        `;
+
+        div.addEventListener('click', function() {
+            lockerList.querySelectorAll('.locker-option').forEach(el => el.classList.remove('selected'));
+            div.classList.add('selected');
+            jobSelectState.selectedLocker = locker;
+            updateJobEstimate();
+        });
+
+        lockerList.appendChild(div);
+    });
+
+    // Csomag szám gombok
+    document.getElementById('pkg-minus').onclick = function() {
+        if (jobSelectState.packageCount > 1) {
+            jobSelectState.packageCount--;
+            document.getElementById('pkg-count').textContent = jobSelectState.packageCount;
+            updateJobEstimate();
+        }
+    };
+    document.getElementById('pkg-plus').onclick = function() {
+        if (jobSelectState.packageCount < 8) {
+            jobSelectState.packageCount++;
+            document.getElementById('pkg-count').textContent = jobSelectState.packageCount;
+            updateJobEstimate();
+        }
+    };
+
+    // Idő opciók
+    document.querySelectorAll('.time-option').forEach(function(btn) {
+        btn.classList.remove('selected');
+        if (parseInt(btn.dataset.time) === 600) btn.classList.add('selected');
+
+        btn.onclick = function() {
+            document.querySelectorAll('.time-option').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            jobSelectState.timeLimit = parseInt(btn.dataset.time);
+            updateJobEstimate();
+        };
+    });
+
+    // Törékeny opciók
+    document.getElementById('fragile-no').onclick = function() {
+        document.querySelectorAll('.fragile-option').forEach(b => b.classList.remove('selected'));
+        this.classList.add('selected');
+        jobSelectState.isFragile = false;
+        updateJobEstimate();
+    };
+    document.getElementById('fragile-yes').onclick = function() {
+        document.querySelectorAll('.fragile-option').forEach(b => b.classList.remove('selected'));
+        this.classList.add('selected');
+        jobSelectState.isFragile = true;
+        updateJobEstimate();
+    };
+
+    // Indítás gomb
+    document.getElementById('job-select-start').onclick = function() {
+        if (!jobSelectState.selectedLocker) {
+            // Jelezzük hogy válasszon lockert
+            lockerList.style.border = '2px solid #ff4444';
+            setTimeout(() => { lockerList.style.border = 'none'; }, 1500);
+            return;
+        }
+
+        postNUI('jobOrderSelected', {
+            lockerId: jobSelectState.selectedLocker.id,
+            packageCount: jobSelectState.packageCount,
+            timeLimit: jobSelectState.timeLimit,
+            isFragile: jobSelectState.isFragile
+        });
+
+        hideAll();
+        postNUI('closeUI', {});
+    };
+
+    // Close gomb
+    document.getElementById('job-select-close-btn').onclick = function() {
+        hideAll();
+        postNUI('closeUI', {});
+    };
+
+    // Reset UI
+    document.getElementById('pkg-count').textContent = '3';
+    updateJobEstimate();
+
+    panel.classList.remove('hidden');
+}
+
+function updateJobEstimate() {
+    const el = document.getElementById('job-estimate-pay');
+    let estimate = 0;
+
+    if (jobSelectState.selectedLocker) {
+        const distMult = jobSelectState.selectedLocker.distanceMultiplier || 1.0;
+        estimate = jobSelectState.basePay * jobSelectState.packageCount * distMult;
+
+        if (jobSelectState.isFragile) {
+            estimate *= 1.5;
+        }
+
+        // Rövidebb idő = kevesebb fizetés (büntetés), hosszabb = normál
+        if (jobSelectState.timeLimit <= 300) {
+            estimate *= 1.3; // Rövid idő = nehezebb = több fizetés
+        }
+    }
+
+    el.textContent = '~ ' + formatNumber(Math.floor(estimate)) + ' Ft';
 }

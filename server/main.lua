@@ -538,9 +538,9 @@ end
 
 -- ==========================================
 -- KÖR KÉRÉS (Generálás) - Fix Locker Pontok
--- Random lockerek + Útvonal optimalizálás
+-- Játékos által választott kör generálás
 -- ==========================================
-RegisterNetEvent('seerpg-futar:server:requestRound', function()
+RegisterNetEvent('seerpg-futar:server:requestRound', function(orderData)
     local source = source
 
     -- Validáció
@@ -559,133 +559,107 @@ RegisterNetEvent('seerpg-futar:server:requestRound', function()
     local skillLevel = GetSkillLevel(data.skill_points)
 
     -- ==========================================
-    -- RANDOM LOCKER PONTOK KIVÁLASZTÁSA
+    -- JÁTÉKOS VÁLASZTÁSA ALAPJÁN GENERÁLÁS
+    -- orderData: {lockerId, packageCount, timeLimit, isFragile}
     -- ==========================================
-    local numLockers = math.random(Config.RoundLockerCount.min, Config.RoundLockerCount.max)
-    numLockers = numLockers + math.floor(skillLevel / 4)
-    numLockers = math.min(numLockers, #Config.LockerPoints)
+    local chosenLockerId = orderData and orderData.lockerId or nil
+    local chosenPackageCount = orderData and orderData.packageCount or 3
+    local chosenTimeLimit = orderData and orderData.timeLimit or 600
+    local chosenFragile = orderData and orderData.isFragile or false
 
-    -- Fisher-Yates shuffle a random kiválasztáshoz
-    local availableLockers = {}
-    for i = 1, #Config.LockerPoints do
-        table.insert(availableLockers, i)
-    end
-    for i = #availableLockers, 2, -1 do
-        local j = math.random(1, i)
-        availableLockers[i], availableLockers[j] = availableLockers[j], availableLockers[i]
-    end
+    -- Validáció: csomag szám (1-8)
+    chosenPackageCount = math.max(1, math.min(8, chosenPackageCount))
 
-    -- Kiválasztott lockerek (rendezés előtt)
-    local selectedLockers = {}
-    for i = 1, numLockers do
-        local lockerPointIndex = availableLockers[i]
-        local lockerPoint = Config.LockerPoints[lockerPointIndex]
-        local distance = #(lockerPoint.coords - Config.Depot.coords)
-        table.insert(selectedLockers, {
-            index = lockerPointIndex,
-            locker = lockerPoint,
-            distance = distance
-        })
+    -- Validáció: időlimit (120-900 mp)
+    chosenTimeLimit = math.max(120, math.min(900, chosenTimeLimit))
+
+    -- Keressük meg a választott lockert
+    local targetLocker = nil
+    for _, locker in ipairs(Config.LockerPoints) do
+        if locker.id == chosenLockerId then
+            targetLocker = locker
+            break
+        end
     end
 
-    -- ==========================================
-    -- ÚTVONAL OPTIMALIZÁLÁS
-    -- Legközelebbi → legtávolabbi sorrend
-    -- ==========================================
-    table.sort(selectedLockers, function(a, b)
-        return a.distance < b.distance
-    end)
+    -- Ha nincs érvényes locker, válasszunk random egyet
+    if not targetLocker then
+        targetLocker = Config.LockerPoints[math.random(1, #Config.LockerPoints)]
+    end
+
+    -- Távolság számítás
+    local distance = #(targetLocker.coords - Config.Depot.coords)
+    local distanceCategory, distanceMultiplier = GetDistanceCategory(distance)
 
     -- ==========================================
-    -- CSOMAGOK GENERÁLÁSA LOCKERENKÉNT
-    -- Egy lockerre több csomag (S, M, L) is mehet!
+    -- CSOMAGOK GENERÁLÁSA A VÁLASZTOTT LOCKERRE
     -- ==========================================
     local deliveries = {}
     local lockerAssignments = {}
+    local lockerPackages = {}
 
-    for _, selected in ipairs(selectedLockers) do
-        local lockerPoint = selected.locker
-        local distance = selected.distance
-        local distanceCategory, distanceMultiplier = GetDistanceCategory(distance)
+    for p = 1, chosenPackageCount do
+        local deliveryType = GetRandomDeliveryType(skillLevel)
 
-        -- Hány csomag kerüljön erre a lockerre
-        local maxPkg = math.min(Config.PackagesPerLocker.max, lockerPoint.maxPackages)
-        local numPackages = math.random(Config.PackagesPerLocker.min, maxPkg)
-
-        local lockerPackages = {}
-
-        for p = 1, numPackages do
-            local deliveryType = GetRandomDeliveryType(skillLevel)
-
-            local delivery = {
-                coords = lockerPoint.coords,
-                label = lockerPoint.label,
-                type = deliveryType,
-                lockerId = lockerPoint.id,
-                lockerIndex = selected.index,
-                distance = distance,
-                distanceCategory = distanceCategory,
-                distanceMultiplier = distanceMultiplier,
-                packageSizeMultiplier = Config.PackageSizeMultiplier[deliveryType] or 1.0,
-            }
-
-            -- Törékeny csomag meghatározás
-            if Config.Fragile.enabled then
-                local fragileRoll = math.random(1, 100)
-                if fragileRoll <= Config.Fragile.chance then
-                    delivery.isFragile = true
-                end
-            end
-
-            -- Expressz csomag meghatározás
-            if Config.Express.enabled then
-                local expressRoll = math.random(1, 100)
-                local expressChance = Config.Express.chance
-                -- Szezonális esemény módosíthatja az esélyt
-                local seasonalEvent = GetActiveSeasonalEvent()
-                if seasonalEvent and seasonalEvent.bonuses and seasonalEvent.bonuses.expressChance then
-                    expressChance = seasonalEvent.bonuses.expressChance
-                end
-                if expressRoll <= expressChance then
-                    delivery.isExpress = true
-                    -- Időlimit számítás: base + (distance/1000) * perKm, clamp min/max
-                    local timeLimit = Config.Express.timeLimit.base + math.floor((distance / 1000) * Config.Express.timeLimit.perKm)
-                    timeLimit = math.max(Config.Express.timeLimit.minTime, math.min(Config.Express.timeLimit.maxTime, timeLimit))
-                    delivery.expressTimeLimit = timeLimit
-                end
-            end
-
-            table.insert(deliveries, delivery)
-            table.insert(lockerPackages, delivery)
-        end
-
-        lockerAssignments[lockerPoint.id] = {
-            locker = lockerPoint,
-            packages = lockerPackages,
+        local delivery = {
+            coords = targetLocker.coords,
+            label = targetLocker.label,
+            type = deliveryType,
+            lockerId = targetLocker.id,
             distance = distance,
             distanceCategory = distanceCategory,
+            distanceMultiplier = distanceMultiplier,
+            packageSizeMultiplier = Config.PackageSizeMultiplier[deliveryType] or 1.0,
+            isFragile = chosenFragile,
         }
+
+        -- Expressz csomag meghatározás (random, a választástól független)
+        if Config.Express.enabled then
+            local expressRoll = math.random(1, 100)
+            local expressChance = Config.Express.chance
+            local seasonalEvent = GetActiveSeasonalEvent()
+            if seasonalEvent and seasonalEvent.bonuses and seasonalEvent.bonuses.expressChance then
+                expressChance = seasonalEvent.bonuses.expressChance
+            end
+            if expressRoll <= expressChance then
+                delivery.isExpress = true
+                local timeLimit = Config.Express.timeLimit.base + math.floor((distance / 1000) * Config.Express.timeLimit.perKm)
+                timeLimit = math.max(Config.Express.timeLimit.minTime, math.min(Config.Express.timeLimit.maxTime, timeLimit))
+                delivery.expressTimeLimit = timeLimit
+            end
+        end
+
+        table.insert(deliveries, delivery)
+        table.insert(lockerPackages, delivery)
     end
 
-    -- Kör regisztrálása
+    lockerAssignments[targetLocker.id] = {
+        locker = targetLocker,
+        packages = lockerPackages,
+        distance = distance,
+        distanceCategory = distanceCategory,
+    }
+
+    -- Kör regisztrálása (az időlimit a játékos által választott!)
     playerRounds[source] = {
         deliveries = deliveries,
         lockerAssignments = lockerAssignments,
         startTime = os.time(),
-        expectedDeliveries = #deliveries
+        expectedDeliveries = #deliveries,
+        customTimeLimit = chosenTimeLimit
     }
 
     -- Küldés kliensnek
     TriggerClientEvent('seerpg-futar:client:roundGenerated', source, {
         deliveries = deliveries,
-        lockerAssignments = lockerAssignments
+        lockerAssignments = lockerAssignments,
+        customTimeLimit = chosenTimeLimit
     })
 
     if Config.Debug then
-        print('[RealRPG-Futar] Kör generálva: ' .. GetPlayerName(source) .. ' - ' .. numLockers .. ' locker, ' .. #deliveries .. ' csomag')
-        for lockerId, assignment in pairs(lockerAssignments) do
-            print('  Locker #' .. lockerId .. ' (' .. assignment.locker.label .. ') - ' .. #assignment.packages .. ' csomag - ' .. assignment.distanceCategory)
-        end
+        print('[RealRPG-Futar] Kör generálva (játékos választás): ' .. GetPlayerName(source))
+        print('  Locker: ' .. targetLocker.label .. ' (' .. distanceCategory .. ')')
+        print('  Csomagok: ' .. chosenPackageCount .. ' | Idő: ' .. chosenTimeLimit .. 'mp | Törékeny: ' .. tostring(chosenFragile))
     end
 end)
 
@@ -726,7 +700,8 @@ RegisterNetEvent('seerpg-futar:server:completeRound', function(completedDeliveri
 
     -- Időlimit ellenőrzés (szerver oldali)
     local elapsed = os.time() - roundData.startTime
-    if elapsed > Config.Round.maxTime + 30 then -- +30 mp puffer hálózati késleltetésre
+    local roundTimeLimit = roundData.customTimeLimit or Config.Round.maxTime
+    if elapsed > roundTimeLimit + 30 then -- +30 mp puffer hálózati késleltetésre
         print('[RealRPG-Futar] ANTICHEAT: ' .. GetPlayerName(source) .. ' időtúllépés szerver oldalon!')
         playerRounds[source] = nil
         return
@@ -807,7 +782,7 @@ RegisterNetEvent('seerpg-futar:server:completeRound', function(completedDeliveri
     local timeBonusLabel = ''
 
     if Config.TimeBonus.enabled then
-        local roundMaxTime = Config.Round.maxTime
+        local roundMaxTime = roundData.customTimeLimit or Config.Round.maxTime
         local timePercent = (elapsed / roundMaxTime) * 100
 
         for _, tier in ipairs(Config.TimeBonus.tiers) do

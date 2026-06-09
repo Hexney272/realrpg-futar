@@ -660,7 +660,7 @@ CreateThread(function()
     while true do
         if isOnRound then
             local elapsed = math.floor((GetGameTimer() - currentRound.startTime) / 1000)
-            local remaining = Config.Round.maxTime - elapsed
+            local remaining = (currentRound.timeLimit or Config.Round.maxTime) - elapsed
 
             if loadingPhase then
                 SendNUIMessage({
@@ -909,8 +909,73 @@ function StartRound()
         return
     end
 
-    TriggerServerEvent('seerpg-futar:server:requestRound')
+    -- Munkaválasztó NUI megnyitása (játékos választja ki hova vigye)
+    OpenJobSelector()
 end
+
+-- Munkaválasztó NUI megnyitása
+function OpenJobSelector()
+    -- Locker pontok listája távolsággal
+    local lockerData = {}
+    local depotCoords = Config.Depot.coords
+
+    for _, locker in ipairs(Config.LockerPoints) do
+        local distance = #(locker.coords - depotCoords)
+        local distCat, distMult = GetDistanceCategory(distance)
+
+        table.insert(lockerData, {
+            id = locker.id,
+            label = locker.label,
+            coords = locker.coords,
+            distance = distance,
+            distanceCategory = distCat,
+            distanceMultiplier = distMult,
+            maxPackages = locker.maxPackages
+        })
+    end
+
+    -- Rendezés távolság szerint (legközelebbi elöl)
+    table.sort(lockerData, function(a, b) return a.distance < b.distance end)
+
+    isUIOpen = true
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'showJobSelector',
+        data = {
+            lockers = lockerData,
+            basePay = Config.BasePayPerDelivery['small'] or 10500
+        }
+    })
+end
+
+-- Távolság kategória helper (kliens oldalon is)
+function GetDistanceCategory(distance)
+    if distance <= Config.DistancePayBonus.near.maxDistance then
+        return 'near', Config.DistancePayBonus.near.multiplier
+    elseif distance <= Config.DistancePayBonus.medium.maxDistance then
+        return 'medium', Config.DistancePayBonus.medium.multiplier
+    elseif distance <= Config.DistancePayBonus.far.maxDistance then
+        return 'far', Config.DistancePayBonus.far.multiplier
+    else
+        return 'veryFar', Config.DistancePayBonus.veryFar.multiplier
+    end
+end
+
+-- NUI callback: Játékos kiválasztotta a megrendelést
+RegisterNUICallback('jobOrderSelected', function(data, cb)
+    SetNuiFocus(false, false)
+    isUIOpen = false
+
+    -- Küldés a szervernek a kiválasztott paraméterekkel
+    TriggerServerEvent('seerpg-futar:server:requestRound', {
+        lockerId = data.lockerId,
+        packageCount = data.packageCount,
+        timeLimit = data.timeLimit,
+        isFragile = data.isFragile
+    })
+
+    cb('ok')
+end)
 
 RegisterNetEvent('seerpg-futar:client:roundGenerated', function(roundData)
     isOnRound = true
@@ -922,6 +987,7 @@ RegisterNetEvent('seerpg-futar:client:roundGenerated', function(roundData)
         completedDeliveries = {},
         startTime = GetGameTimer(),
         totalDeliveries = #roundData.deliveries,
+        timeLimit = roundData.customTimeLimit or Config.Round.maxTime,
     }
 
     loadingPhase = true
@@ -939,7 +1005,7 @@ RegisterNetEvent('seerpg-futar:client:roundGenerated', function(roundData)
             expressTimers[i] = { startTime = GetGameTimer(), timeLimit = delivery.expressTimeLimit }
         end
         if delivery.isFragile then
-            fragileDamage[i] = 0
+            fragileDamage[i] = Config.Fragile.startDamage or 60
         end
     end
 

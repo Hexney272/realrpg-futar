@@ -948,3 +948,239 @@ body {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
 }
+
+
+
+/* ==========================================
+   MUNKAVÁLASZTÓ PANEL
+   ========================================== */
+.job-select-content {
+    min-width: 400px;
+    max-width: 460px;
+}
+
+.job-select-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 18px;
+    letter-spacing: 0.5px;
+}
+
+.job-select-section {
+    margin-bottom: 16px;
+}
+
+.job-select-label {
+    font-size: 12px;
+    color: #8888aa;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Csomagpont lista (görgethető) */
+.job-select-lockers {
+    max-height: 140px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 4px;
+}
+
+.job-select-lockers::-webkit-scrollbar {
+    width: 4px;
+}
+.job-select-lockers::-webkit-scrollbar-thumb {
+    background: rgba(68, 170, 255, 0.3);
+    border-radius: 4px;
+}
+
+.locker-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.locker-option:hover {
+    background: rgba(68, 170, 255, 0.08);
+    border-color: rgba(68, 170, 255, 0.3);
+}
+
+.locker-option.selected {
+    background: rgba(68, 170, 255, 0.12);
+    border-color: #44aaff;
+}
+
+.locker-option-name {
+    font-size: 13px;
+    color: #d0d0e0;
+    font-weight: 500;
+}
+
+.locker-option-dist {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.locker-option-dist.near { background: rgba(76,255,76,0.15); color: #4cff4c; }
+.locker-option-dist.medium { background: rgba(255,170,0,0.15); color: #ffaa00; }
+.locker-option-dist.far { background: rgba(255,68,68,0.15); color: #ff6644; }
+.locker-option-dist.veryFar { background: rgba(204,68,255,0.15); color: #cc44ff; }
+
+/* Csomag szám slider */
+.job-select-slider-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.job-select-btn-minus,
+.job-select-btn-plus {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.job-select-btn-minus:hover,
+.job-select-btn-plus:hover {
+    border-color: #44aaff;
+    background: rgba(68, 170, 255, 0.15);
+}
+
+.job-select-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffffff;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Időlimit opciók */
+.job-select-time-options {
+    display: flex;
+    gap: 8px;
+}
+
+.time-option {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    color: #aaaacc;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.time-option:hover {
+    border-color: rgba(68, 170, 255, 0.4);
+    color: #ffffff;
+}
+
+.time-option.selected {
+    border-color: #44aaff;
+    background: rgba(68, 170, 255, 0.15);
+    color: #ffffff;
+}
+
+/* Törékeny választó */
+.job-select-fragile-row {
+    display: flex;
+    gap: 8px;
+}
+
+.fragile-option {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    color: #aaaacc;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.fragile-option:hover {
+    border-color: rgba(255, 170, 0, 0.4);
+}
+
+.fragile-option.selected {
+    border-color: #ffaa00;
+    background: rgba(255, 170, 0, 0.12);
+    color: #ffffff;
+}
+
+/* Becsült fizetés */
+.job-select-estimate {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(76, 255, 76, 0.06);
+    border: 1px solid rgba(76, 255, 76, 0.15);
+    border-radius: 8px;
+    margin-bottom: 14px;
+}
+
+.estimate-label {
+    color: #8888aa;
+    font-size: 13px;
+}
+
+.estimate-value {
+    color: #4cff4c;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+/* Indítás gomb */
+.job-select-start-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4cff4c, #00cc44);
+    color: #000000;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+}
+
+.job-select-start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(76, 255, 76, 0.3);
+}
+
+.job-select-start-btn:active {
+    transform: translateY(0);
+}
