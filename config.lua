@@ -255,11 +255,11 @@ Config.DeliveryBlip = {
     label = 'Kézbesítés'
 }
 
--- Prop-ok (kézben tartott tárgyak)
+-- Prop-ok (kézben tartott tárgyak) - Custom stream propok
 Config.Props = {
-    package_small = 'prop_cs_cardbox_01',
-    package_medium = 'prop_cs_box_clothes',
-    package_large = 'hei_prop_heist_box',
+    package_small = 'bzzz_prop_custom_box_1a',
+    package_medium = 'bzzz_prop_custom_box_2a',
+    package_large = 'bzzz_prop_custom_box_3a',
     letter = 'prop_cs_documents_01',
 }
 
@@ -445,7 +445,7 @@ Config.Interaction = {
 -- ==========================================
 Config.Locker = {
     -- Locker prop modell (custom prop - stream-elni kell!)
-    model = 'prop_shop_locker',
+    model = 'bzzz_prop_shop_locker',
 
     -- Fiók ajtók indexei a modellben (ha a prop-nak vannak door bone-jai)
     -- Ha a prop nem támogat door anim-ot, szimulálunk nyitást object-ekkel
@@ -936,12 +936,12 @@ Config.SeasonalEvents = {
 -- Nagyobb csomag = nagyobb prop + lassabb mozgás
 -- ==========================================
 Config.PackageVisuals = {
-    -- Prop modellek méret szerint
+    -- Prop modellek méret szerint (custom stream propok)
     props = {
         ['level']  = { model = 'prop_cs_documents_01', scale = 1.0 },
-        ['small']  = { model = 'prop_cs_cardbox_01',   scale = 1.0 },
-        ['medium'] = { model = 'prop_cs_box_clothes',  scale = 1.0 },
-        ['large']  = { model = 'hei_prop_heist_box',   scale = 1.0 },
+        ['small']  = { model = 'bzzz_prop_custom_box_1a', scale = 1.0 },
+        ['medium'] = { model = 'bzzz_prop_custom_box_2a', scale = 1.0 },
+        ['large']  = { model = 'bzzz_prop_custom_box_3a', scale = 1.0 },
     },
 
     -- Mozgás lassítás méret szerint (1.0 = normál sebesség)

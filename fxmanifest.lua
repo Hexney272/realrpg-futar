@@ -24,8 +24,9 @@ files {
     'html/script.js'
 }
 
--- Custom prop stream (prop_shop_locker)
-data_file 'DLC_ITYP_REQUEST' 'stream/*.ytyp'
+-- Custom prop stream (bzzz_prop_shop_locker + bzzz_prop_custom_box)
+data_file 'DLC_ITYP_REQUEST' 'stream/bzzz_prop_shop_locker.ytyp'
+data_file 'DLC_ITYP_REQUEST' 'stream/bzzz_prop_gopostal_boxes.ytyp'
 
 dependencies {
     'oxmysql'
