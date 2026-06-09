@@ -438,53 +438,53 @@ CreateThread(function()
         end
 
         -- ==========================================
-        -- KÉZBESÍTÉSI PONT INTERAKCIÓ (Locker rendszer)
+        -- KÉZBESÍTÉSI FÁZIS INTERAKCIÓK
+        -- Csomag kivétel: KOCSI közelében (bárhol!)
+        -- Locker interakció: LOCKER közelében
         -- ==========================================
         if isOnRound and currentRound.pickedUp and currentRound.currentDeliveryIndex <= #currentRound.deliveries and not isAnimPlaying then
             local delivery = currentRound.deliveries[currentRound.currentDeliveryIndex]
             if delivery then
-                local distToDelivery = #(playerCoords - delivery.coords)
-                if distToDelivery < Config.Interaction.deliveryDistance + 3.0 then
+                -- Target locker beállítása (ha még nincs)
+                if not currentLockerTarget then
+                    SetCurrentLockerTarget(delivery)
+                end
 
-                    -- Target locker beállítása (ha még nincs)
-                    if not currentLockerTarget then
-                        SetCurrentLockerTarget(delivery)
-                    end
-
-                    if not hasPackageInHand then
-                        -- 1. Lépés: Csomag kivétele a járműből
-                        if jobVehicle and DoesEntityExist(jobVehicle) then
-                            local vehLoadPoint = GetVehicleLoadPoint()
-                            local distToVeh = #(playerCoords - vehLoadPoint)
-                            if distToVeh < Config.VehicleCargo.doorInteractDistance + 1.0 then
-                                table.insert(newInteractions, {
-                                    id = 'take_from_vehicle',
-                                    type = 'take_from_vehicle',
-                                    worldCoords = vector3(vehLoadPoint.x, vehLoadPoint.y, vehLoadPoint.z + 0.5)
-                                })
-                            end
+                -- 1. CSOMAG KIVÉTEL A KOCSIBÓL (a kocsi közelében, NEM a locker közelében!)
+                if not hasPackageInHand then
+                    if jobVehicle and DoesEntityExist(jobVehicle) then
+                        local vehLoadPoint = GetVehicleLoadPoint()
+                        local distToVeh = #(playerCoords - vehLoadPoint)
+                        if distToVeh < Config.VehicleCargo.doorInteractDistance + 1.0 then
+                            table.insert(newInteractions, {
+                                id = 'take_from_vehicle',
+                                type = 'take_from_vehicle',
+                                worldCoords = vector3(vehLoadPoint.x, vehLoadPoint.y, vehLoadPoint.z + 0.5)
+                            })
                         end
-                    else
-                        -- 2. Lépés: Locker fiók kezelés
-                        local lockerObj = allLockerObjects[delivery.lockerId]
-                        if lockerObj and DoesEntityExist(lockerObj) then
-                            local lockerCoords = GetEntityCoords(lockerObj)
-                            local distToLocker = #(playerCoords - lockerCoords)
+                    end
+                end
 
-                            if distToLocker < Config.Locker.interactDistance then
-                                if not isLockerDoorOpen then
-                                    table.insert(newInteractions, {
-                                        id = 'open_locker',
-                                        type = 'open_locker',
-                                        worldCoords = vector3(lockerCoords.x, lockerCoords.y, lockerCoords.z + Config.Locker.compartments[assignedCompartment].offsetZ + 0.2)
-                                    })
-                                else
-                                    table.insert(newInteractions, {
-                                        id = 'deliver',
-                                        type = 'deliver',
-                                        worldCoords = vector3(lockerCoords.x, lockerCoords.y, lockerCoords.z + Config.Locker.compartments[assignedCompartment].offsetZ + 0.2)
-                                    })
-                                end
+                -- 2. LOCKER INTERAKCIÓ (a locker közelében, csomag kézben!)
+                if hasPackageInHand then
+                    local lockerObj = allLockerObjects[delivery.lockerId]
+                    if lockerObj and DoesEntityExist(lockerObj) then
+                        local lockerCoords = GetEntityCoords(lockerObj)
+                        local distToLocker = #(playerCoords - lockerCoords)
+
+                        if distToLocker < Config.Locker.interactDistance then
+                            if not isLockerDoorOpen then
+                                table.insert(newInteractions, {
+                                    id = 'open_locker',
+                                    type = 'open_locker',
+                                    worldCoords = vector3(lockerCoords.x, lockerCoords.y, lockerCoords.z + Config.Locker.compartments[assignedCompartment].offsetZ + 0.2)
+                                })
+                            else
+                                table.insert(newInteractions, {
+                                    id = 'deliver',
+                                    type = 'deliver',
+                                    worldCoords = vector3(lockerCoords.x, lockerCoords.y, lockerCoords.z + Config.Locker.compartments[assignedCompartment].offsetZ + 0.2)
+                                })
                             end
                         end
                     end
