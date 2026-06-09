@@ -1259,7 +1259,7 @@ end
 function SetCurrentLockerTarget(delivery)
     currentLockerTarget = delivery
     isLockerDoorOpen = false
-    hasPackageInHand = false
+    -- NE reseteljük a hasPackageInHand-et itt! Az a TakePackageFromVehicle dolga.
 
     -- Fiók hozzárendelés
     if Config.Locker.assignMode == 'random' then

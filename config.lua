@@ -457,7 +457,7 @@ Config.Locker = {
     heading = 0.0,    -- A szerver generálja delivery-nként
 
     -- Interakció távolság
-    interactDistance = 1.8,
+    interactDistance = 3.0,
 
     -- Fiók animáció (fizikai object mozgatás)
     doorOpenOffset = vector3(0.0, 0.35, 0.0),  -- Mennyit nyílik ki a fiók (Y tengely)
