@@ -1312,13 +1312,23 @@ function TakePackageFromVehicle()
     isAnimPlaying = true
     local playerPed = PlayerPedId()
     local delivery = currentRound.deliveries[currentRound.currentDeliveryIndex]
+    if not delivery then isAnimPlaying = false return end
 
-    -- Jármű ajtó nyitás (ha zárva)
+    -- Jármű ajtó nyitás
     SetVehicleDoorOpen(jobVehicle, Config.VehicleCargo.doorIndex, false, false)
     Wait(500)
 
-    -- Animáció: kinyúl a kocsihoz
-    local anim = Config.Animations.pickupFromPallet
+    -- Méret-specifikus animáció (mint a PickupFromPallet-nél)
+    local animKey = 'pickupSmall'
+    if delivery.type == 'level' then animKey = 'pickupLetter'
+    elseif delivery.type == 'small' then animKey = 'pickupSmall'
+    elseif delivery.type == 'medium' then animKey = 'pickupMedium'
+    elseif delivery.type == 'large' then animKey = 'pickupLarge'
+    end
+
+    local anim = Config.Animations[animKey]
+    if not anim then isAnimPlaying = false return end
+
     RequestAnimDict(anim.dict)
     while not HasAnimDictLoaded(anim.dict) do Wait(10) end
     TaskPlayAnim(playerPed, anim.dict, anim.name, 8.0, -8.0, anim.duration, anim.flag, 0, false, false, false)
@@ -1333,7 +1343,7 @@ function TakePackageFromVehicle()
     Wait(anim.duration * 0.4)
     ClearPedTasks(playerPed)
 
-    -- Carry anim
+    -- Carry animáció (típussal!)
     StartCarryAnimation(playerPed, delivery.type)
 
     -- Jármű ajtó bezárás
