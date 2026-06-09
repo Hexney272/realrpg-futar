@@ -961,17 +961,14 @@ function GetDistanceCategory(distance)
     end
 end
 
--- NUI callback: Játékos kiválasztotta a megrendelést
+-- NUI callback: Játékos kiválasztotta a csomagpontot
 RegisterNUICallback('jobOrderSelected', function(data, cb)
     SetNuiFocus(false, false)
     isUIOpen = false
 
-    -- Küldés a szervernek a kiválasztott paraméterekkel
+    -- Küldés a szervernek (csak a lockerId - a többit a szerver dönt el)
     TriggerServerEvent('seerpg-futar:server:requestRound', {
-        lockerId = data.lockerId,
-        packageCount = data.packageCount,
-        timeLimit = data.timeLimit,
-        isFragile = data.isFragile
+        lockerId = data.lockerId
     })
 
     cb('ok')

@@ -538,7 +538,7 @@ end
 
 -- ==========================================
 -- KÖR KÉRÉS (Generálás) - Fix Locker Pontok
--- Játékos által választott kör generálás
+-- Játékos által választott CSOMAGPONT, script határozza meg a többit
 -- ==========================================
 RegisterNetEvent('seerpg-futar:server:requestRound', function(orderData)
     local source = source
@@ -559,19 +559,9 @@ RegisterNetEvent('seerpg-futar:server:requestRound', function(orderData)
     local skillLevel = GetSkillLevel(data.skill_points)
 
     -- ==========================================
-    -- JÁTÉKOS VÁLASZTÁSA ALAPJÁN GENERÁLÁS
-    -- orderData: {lockerId, packageCount, timeLimit, isFragile}
+    -- JÁTÉKOS CSAK A LOCKERT VÁLASZTJA - A TÖBBI AUTOMATIKUS
     -- ==========================================
     local chosenLockerId = orderData and orderData.lockerId or nil
-    local chosenPackageCount = orderData and orderData.packageCount or 3
-    local chosenTimeLimit = orderData and orderData.timeLimit or 600
-    local chosenFragile = orderData and orderData.isFragile or false
-
-    -- Validáció: csomag szám (1-8)
-    chosenPackageCount = math.max(1, math.min(8, chosenPackageCount))
-
-    -- Validáció: időlimit (120-900 mp)
-    chosenTimeLimit = math.max(120, math.min(900, chosenTimeLimit))
 
     -- Keressük meg a választott lockert
     local targetLocker = nil
@@ -592,14 +582,33 @@ RegisterNetEvent('seerpg-futar:server:requestRound', function(orderData)
     local distanceCategory, distanceMultiplier = GetDistanceCategory(distance)
 
     -- ==========================================
-    -- CSOMAGOK GENERÁLÁSA A VÁLASZTOTT LOCKERRE
+    -- SCRIPT HATÁROZZA MEG: csomag szám, idő, törékeny
+    -- ==========================================
+
+    -- Csomag szám: random (min-max) + skill bónusz
+    local packageCount = math.random(Config.PackagesPerLocker.min, math.min(Config.PackagesPerLocker.max, targetLocker.maxPackages))
+    packageCount = packageCount + math.floor(skillLevel / 5)
+    packageCount = math.min(packageCount, targetLocker.maxPackages)
+
+    -- Időlimit: távolság alapján (távolabb = több idő)
+    local timeLimit = math.floor(300 + (distance / 1000) * 60)  -- 5 perc + 1 perc/km
+    timeLimit = math.max(300, math.min(900, timeLimit))  -- 5-15 perc között
+
+    -- ==========================================
+    -- CSOMAGOK GENERÁLÁSA
     -- ==========================================
     local deliveries = {}
     local lockerAssignments = {}
     local lockerPackages = {}
 
-    for p = 1, chosenPackageCount do
+    for p = 1, packageCount do
         local deliveryType = GetRandomDeliveryType(skillLevel)
+
+        -- Törékeny: random a config chance alapján
+        local isFragile = false
+        if Config.Fragile.enabled then
+            isFragile = math.random(1, 100) <= Config.Fragile.chance
+        end
 
         local delivery = {
             coords = targetLocker.coords,
@@ -610,10 +619,10 @@ RegisterNetEvent('seerpg-futar:server:requestRound', function(orderData)
             distanceCategory = distanceCategory,
             distanceMultiplier = distanceMultiplier,
             packageSizeMultiplier = Config.PackageSizeMultiplier[deliveryType] or 1.0,
-            isFragile = chosenFragile,
+            isFragile = isFragile,
         }
 
-        -- Expressz csomag meghatározás (random, a választástól független)
+        -- Expressz csomag (random)
         if Config.Express.enabled then
             local expressRoll = math.random(1, 100)
             local expressChance = Config.Express.chance
@@ -623,9 +632,9 @@ RegisterNetEvent('seerpg-futar:server:requestRound', function(orderData)
             end
             if expressRoll <= expressChance then
                 delivery.isExpress = true
-                local timeLimit = Config.Express.timeLimit.base + math.floor((distance / 1000) * Config.Express.timeLimit.perKm)
-                timeLimit = math.max(Config.Express.timeLimit.minTime, math.min(Config.Express.timeLimit.maxTime, timeLimit))
-                delivery.expressTimeLimit = timeLimit
+                local expTime = Config.Express.timeLimit.base + math.floor((distance / 1000) * Config.Express.timeLimit.perKm)
+                expTime = math.max(Config.Express.timeLimit.minTime, math.min(Config.Express.timeLimit.maxTime, expTime))
+                delivery.expressTimeLimit = expTime
             end
         end
 
@@ -640,26 +649,26 @@ RegisterNetEvent('seerpg-futar:server:requestRound', function(orderData)
         distanceCategory = distanceCategory,
     }
 
-    -- Kör regisztrálása (az időlimit a játékos által választott!)
+    -- Kör regisztrálása
     playerRounds[source] = {
         deliveries = deliveries,
         lockerAssignments = lockerAssignments,
         startTime = os.time(),
         expectedDeliveries = #deliveries,
-        customTimeLimit = chosenTimeLimit
+        customTimeLimit = timeLimit
     }
 
     -- Küldés kliensnek
     TriggerClientEvent('seerpg-futar:client:roundGenerated', source, {
         deliveries = deliveries,
         lockerAssignments = lockerAssignments,
-        customTimeLimit = chosenTimeLimit
+        customTimeLimit = timeLimit
     })
 
     if Config.Debug then
-        print('[RealRPG-Futar] Kör generálva (játékos választás): ' .. GetPlayerName(source))
+        print('[RealRPG-Futar] Kör generálva: ' .. GetPlayerName(source))
         print('  Locker: ' .. targetLocker.label .. ' (' .. distanceCategory .. ')')
-        print('  Csomagok: ' .. chosenPackageCount .. ' | Idő: ' .. chosenTimeLimit .. 'mp | Törékeny: ' .. tostring(chosenFragile))
+        print('  Csomagok: ' .. packageCount .. ' | Idő: ' .. timeLimit .. 'mp')
     end
 end)
 
