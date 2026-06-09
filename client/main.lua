@@ -88,6 +88,9 @@ local shopNPC = nil
 -- INICIALIZÁLÁS
 -- ==========================================
 CreateThread(function()
+    -- Várunk hogy a streaming rendszer betöltse a custom propokat (.ytyp)
+    Wait(5000)
+
     if Config.Depot.blip.enabled then
         depotBlip = AddBlipForCoord(Config.Depot.coords)
         SetBlipSprite(depotBlip, Config.Depot.blip.sprite)
